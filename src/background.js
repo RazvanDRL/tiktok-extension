@@ -1,23 +1,91 @@
 // Background service worker for handling API requests (bypasses CORS)
 // Auth tokens are managed by the popup and stored in chrome.storage.local
+// Note: Service workers can't use ES modules, so we rely on popup for Firebase auth
 
-// Get Firebase ID token from storage (set by popup)
-async function getAuthToken() {
+// Track token expiration time (tokens expire after 1 hour)
+let tokenExpirationTime = null;
+
+// Request a fresh Firebase ID token from popup
+async function requestFreshTokenFromPopup() {
     return new Promise((resolve, reject) => {
-        chrome.storage.local.get(['firebaseAuthToken'], (result) => {
+        // Send message to popup to refresh token
+        chrome.runtime.sendMessage({ action: 'refreshToken' }, (response) => {
+            // If popup is closed or not responding, chrome.runtime.lastError will be set
             if (chrome.runtime.lastError) {
-                reject(new Error(chrome.runtime.lastError.message));
+                // Popup might be closed, reject to fall back to stored token
+                reject(new Error('Popup not available'));
                 return;
             }
 
-            if (!result.firebaseAuthToken) {
-                reject(new Error('User not authenticated. Please sign in through the extension popup.'));
+            if (!response || !response.success) {
+                reject(new Error(response?.error || 'Failed to refresh token'));
                 return;
             }
 
-            resolve(result.firebaseAuthToken);
+            // Update token expiration time (tokens expire after 1 hour)
+            tokenExpirationTime = Date.now() + (55 * 60 * 1000); // Set to 55 minutes to be safe
+            resolve(response.token);
         });
     });
+}
+
+// Check if stored token is likely expired (older than 50 minutes)
+function isTokenLikelyExpired(storedTime) {
+    if (!storedTime) return true;
+    const now = Date.now();
+    const tokenAge = now - storedTime;
+    // Consider token expired if older than 50 minutes (tokens expire after 1 hour)
+    return tokenAge > (50 * 60 * 1000);
+}
+
+// Get Firebase ID token - ALWAYS refresh before each request to ensure token is valid
+async function getAuthToken() {
+    // Always try to refresh token from popup first (before every request)
+    try {
+        const freshToken = await requestFreshTokenFromPopup();
+        if (freshToken && freshToken.length >= 100) {
+            // Store fresh token with timestamp
+            await chrome.storage.local.set({
+                firebaseAuthToken: freshToken,
+                firebaseTokenTimestamp: Date.now()
+            });
+            console.log('[TikTok Extension] Background: Refreshed token from popup before request');
+            return freshToken;
+        } else {
+            throw new Error('Invalid token received from popup');
+        }
+    } catch (error) {
+        // If popup is not available, check if we have a stored token
+        if (error.message.includes('Popup not available')) {
+            console.warn('[TikTok Extension] Background: Popup not available, checking stored token...');
+
+            // Get stored token as fallback
+            const stored = await new Promise((resolve, reject) => {
+                chrome.storage.local.get(['firebaseAuthToken', 'firebaseTokenTimestamp'], (result) => {
+                    if (chrome.runtime.lastError) {
+                        reject(new Error(chrome.runtime.lastError.message));
+                        return;
+                    }
+                    resolve(result);
+                });
+            });
+
+            if (!stored.firebaseAuthToken) {
+                throw new Error('User not authenticated. Please open the extension popup and sign in.');
+            }
+
+            // Check if stored token is likely expired
+            if (isTokenLikelyExpired(stored.firebaseTokenTimestamp)) {
+                throw new Error('Token expired. Please open the extension popup to refresh your session.');
+            }
+
+            console.warn('[TikTok Extension] Background: Using stored token (popup unavailable, but token still valid)');
+            return stored.firebaseAuthToken;
+        }
+
+        // For other errors, rethrow
+        throw error;
+    }
 }
 
 // Get current user info from storage
@@ -78,7 +146,8 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         // Store auth state from popup
         chrome.storage.local.set({
             firebaseAuthToken: request.token,
-            firebaseUser: request.user
+            firebaseUser: request.user,
+            firebaseTokenTimestamp: Date.now() // Store timestamp for expiration checking
         });
         sendResponse({ success: true });
         return false;
@@ -90,7 +159,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 // EIUxJKygORXCXDU8AkN5dwDro943
 
 async function downloadVideo(url) {
-    const baseUrl = "https://3ff8ea93b701.ngrok-free.app/api/ai-videos/generate-from-tiktok";
+    const baseUrl = "https://bfbc87332dac.ngrok-free.app/api/ai-videos/generate-from-tiktok";
 
     console.log('[TikTok Extension] Background: Making request to:', baseUrl);
     console.log('[TikTok Extension] Background: Video URL:', url);
@@ -100,13 +169,20 @@ async function downloadVideo(url) {
         throw new Error('Invalid TikTok URL provided');
     }
 
-    // Get Firebase auth token
+    // Get Firebase auth token - getAuthToken() always refreshes before returning
+    // This ensures we never use an expired token
     let authToken;
     try {
-        authToken = await getAuthToken();
-        console.log('[TikTok Extension] Background: Got auth token');
+        authToken = await getAuthToken(); // This will refresh the token from popup before returning
+        console.log('[TikTok Extension] Background: Got refreshed auth token, length:', authToken?.length);
+
+        // Verify token is not empty
+        if (!authToken || authToken.length < 100) {
+            throw new Error('Invalid auth token received');
+        }
     } catch (error) {
-        throw new Error('Authentication required. Please sign in through the extension popup.');
+        console.error('[TikTok Extension] Background: Failed to get auth token:', error);
+        throw new Error('Authentication required. Please sign in through the extension popup. If you are already signed in, try signing out and back in.');
     }
 
     // Get current user info
@@ -132,7 +208,7 @@ async function downloadVideo(url) {
                 duration: 4,
                 size: "720x1280",
                 language: "english",
-                uploaded_by: user.displayName || user.email || 'User'
+                uploaded_by: user.name || user.email || 'User'
             }),
         });
 

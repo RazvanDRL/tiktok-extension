@@ -223,6 +223,30 @@
         }
 
         try {
+            // Get user ID and token from auth storage
+            const storageData = await new Promise((resolve, reject) => {
+                chrome.storage.local.get(['firebaseAuthToken', 'firebaseUser'], (result) => {
+                    if (chrome.runtime.lastError) {
+                        reject(new Error(chrome.runtime.lastError.message));
+                        return;
+                    }
+                    resolve(result);
+                });
+            });
+
+            const userId = storageData.firebaseUser?.uid;
+            const token = storageData.firebaseAuthToken;
+
+            // Log user ID and token to console to verify they stay the same
+            console.log('[TikTok Extension] User ID:', userId);
+            console.log('[TikTok Extension] Auth Token:', token ? `${token.substring(0, 20)}...` : 'No token');
+
+            if (!userId || !token) {
+                console.error('[TikTok Extension] Missing auth credentials');
+                alert('Authentication required. Please sign in through the extension popup.');
+                return;
+            }
+
             // Send message to background script to handle the API request (bypasses CORS)
             const response = await chrome.runtime.sendMessage({
                 action: 'downloadVideo',

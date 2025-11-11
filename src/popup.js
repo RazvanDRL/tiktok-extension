@@ -17,28 +17,69 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 
-// Sync auth state with background script via chrome.storage
+// Sync auth state with background script via chrome.storage and update UI
 onAuthStateChanged(auth, async (user) => {
     if (user) {
-        // Get fresh token and store it
+        // Get fresh token and store it (force refresh to ensure it's valid)
         try {
-            const token = await user.getIdToken();
+            const token = await user.getIdToken(true); // Force refresh
             await chrome.storage.local.set({
                 firebaseAuthToken: token,
+                firebaseTokenTimestamp: Date.now(), // Store timestamp for expiration checking
                 firebaseUser: {
                     uid: user.uid,
                     email: user.email,
                     displayName: user.displayName
                 }
             });
-            console.log('Auth state synced to storage');
+            console.log('Auth state synced to storage with fresh token');
         } catch (error) {
             console.error('Failed to sync auth state:', error);
         }
+        // User is signed in - update UI
+        showUserInfo(user);
     } else {
         // Clear storage on logout
-        await chrome.storage.local.remove(['firebaseAuthToken', 'firebaseUser']);
+        await chrome.storage.local.remove(['firebaseAuthToken', 'firebaseUser', 'firebaseTokenTimestamp']);
+        // User is signed out - update UI
+        showLoginForm();
     }
+});
+
+// Listen for token refresh requests from background script
+chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+    if (request.action === 'refreshToken') {
+        // Get current user and refresh token
+        const user = auth.currentUser;
+        if (!user) {
+            sendResponse({ success: false, error: 'User not authenticated' });
+            return true;
+        }
+
+        // Force refresh the token
+        user.getIdToken(true)
+            .then(async (token) => {
+                // Update storage with fresh token and timestamp
+                await chrome.storage.local.set({
+                    firebaseAuthToken: token,
+                    firebaseTokenTimestamp: Date.now(), // Store timestamp for expiration checking
+                    firebaseUser: {
+                        uid: user.uid,
+                        email: user.email,
+                        displayName: user.displayName
+                    }
+                });
+                console.log('Token refreshed and stored');
+                sendResponse({ success: true, token });
+            })
+            .catch((error) => {
+                console.error('Failed to refresh token:', error);
+                sendResponse({ success: false, error: error.message });
+            });
+
+        return true; // Indicates we will send a response asynchronously
+    }
+    return false;
 });
 
 // Get DOM elements
@@ -51,16 +92,6 @@ const userInfo = document.getElementById('user-info');
 const userEmail = document.getElementById('user-email');
 const errorMessage = document.getElementById('error-message');
 
-// Check auth state
-onAuthStateChanged(auth, (user) => {
-    if (user) {
-        // User is signed in
-        showUserInfo(user);
-    } else {
-        // User is signed out
-        showLoginForm();
-    }
-});
 
 function showLoginForm() {
     loginForm.style.display = 'block';
