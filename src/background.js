@@ -105,7 +105,11 @@ async function getCurrentUser() {
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     if (request.action === 'downloadVideo') {
         console.log('[TikTok Extension] Background: Received download request for URL:', request.url);
-        downloadVideo(request.url)
+        console.log('[TikTok Extension] Background: Prompt:', request.prompt);
+        console.log('[TikTok Extension] Background: Count:', request.count);
+        console.log('[TikTok Extension] Background: Duration:', request.duration);
+        console.log('[TikTok Extension] Background: Size:', request.size);
+        downloadVideo(request.url, request.prompt, request.count, request.duration, request.size)
             .then(data => {
                 console.log('[TikTok Extension] Background: Download successful');
                 sendResponse({ success: true, data });
@@ -158,11 +162,15 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
 // EIUxJKygORXCXDU8AkN5dwDro943
 
-async function downloadVideo(url) {
+async function downloadVideo(url, prompt = '', count = 1, duration = 8, size = '720x1280') {
     const baseUrl = "https://bfbc87332dac.ngrok-free.app/api/ai-videos/generate-from-tiktok";
 
     console.log('[TikTok Extension] Background: Making request to:', baseUrl);
     console.log('[TikTok Extension] Background: Video URL:', url);
+    console.log('[TikTok Extension] Background: Prompt:', prompt);
+    console.log('[TikTok Extension] Background: Count:', count);
+    console.log('[TikTok Extension] Background: Duration:', duration);
+    console.log('[TikTok Extension] Background: Size:', size);
 
     // Validate URL before making request
     if (!url || typeof url !== 'string' || !url.includes('tiktok.com')) {
@@ -192,6 +200,19 @@ async function downloadVideo(url) {
     }
 
     try {
+        const requestBody = {
+            url: url,
+            userId: user.uid,
+            count: count || 1,
+            duration: duration || 4,
+            size: size || "720x1280",
+            language: "english",
+            uploaded_by: user.name || user.email || 'User',
+            prompt: prompt || ''
+        };
+
+        console.log('[TikTok Extension] Background: Request body:', JSON.stringify(requestBody, null, 2));
+
         const response = await fetch(baseUrl, {
             method: 'POST',
             headers: {
@@ -201,15 +222,7 @@ async function downloadVideo(url) {
                 // ngrok sometimes requires this header
                 'ngrok-skip-browser-warning': 'true'
             },
-            body: JSON.stringify({
-                url: url,
-                userId: user.uid,
-                count: 1,
-                duration: 4,
-                size: "720x1280",
-                language: "english",
-                uploaded_by: user.name || user.email || 'User'
-            }),
+            body: JSON.stringify(requestBody),
         });
 
         console.log('[TikTok Extension] Background: Response status:', response.status);

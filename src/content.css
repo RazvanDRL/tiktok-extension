@@ -56,3 +56,139 @@
     stroke: #ffffff !important;
     fill: none !important;
 }
+
+/* Prompt modal dialog */
+.ttx-prompt-modal {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    background: rgba(0, 0, 0, 0.6) !important;
+    z-index: 2147483648 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif !important;
+}
+
+.ttx-prompt-modal-content {
+    background: #ffffff !important;
+    border-radius: 12px !important;
+    padding: 24px !important;
+    width: 90% !important;
+    max-width: 800px !important;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3) !important;
+}
+
+.ttx-prompt-modal h3 {
+    margin: 0 0 16px 0 !important;
+    font-size: 20px !important;
+    font-weight: 600 !important;
+    color: #000000 !important;
+}
+
+.ttx-prompt-modal textarea {
+    width: 100% !important;
+    min-height: 120px !important;
+    padding: 12px !important;
+    border: 1px solid #ddd !important;
+    border-radius: 8px !important;
+    font-size: 14px !important;
+    font-family: inherit !important;
+    resize: vertical !important;
+    box-sizing: border-box !important;
+    margin-bottom: 16px !important;
+}
+
+.ttx-prompt-modal textarea:focus {
+    outline: none !important;
+    border-color: #0066ff !important;
+    box-shadow: 0 0 0 3px rgba(0, 102, 255, 0.1) !important;
+}
+
+.ttx-prompt-modal-options {
+    display: grid !important;
+    grid-template-columns: repeat(3, 1fr) !important;
+    gap: 16px !important;
+    margin-bottom: 20px !important;
+}
+
+.ttx-prompt-modal-field-group {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 8px !important;
+}
+
+.ttx-prompt-modal-label {
+    font-size: 14px !important;
+    font-weight: 500 !important;
+    color: #333 !important;
+}
+
+.ttx-prompt-modal-select {
+    width: 100% !important;
+    padding: 10px 12px !important;
+    border: 1px solid #ddd !important;
+    border-radius: 6px !important;
+    font-size: 14px !important;
+    font-family: inherit !important;
+    background: #ffffff !important;
+    color: #333 !important;
+    cursor: pointer !important;
+    box-sizing: border-box !important;
+    appearance: none !important;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23333' d='M6 9L1 4h10z'/%3E%3C/svg%3E") !important;
+    background-repeat: no-repeat !important;
+    background-position: right 12px center !important;
+    padding-right: 36px !important;
+}
+
+.ttx-prompt-modal-select:focus {
+    outline: none !important;
+    border-color: #0066ff !important;
+    box-shadow: 0 0 0 3px rgba(0, 102, 255, 0.1) !important;
+}
+
+.ttx-prompt-modal-select:hover {
+    border-color: #999 !important;
+}
+
+.ttx-prompt-modal-buttons {
+    display: flex !important;
+    gap: 12px !important;
+    justify-content: flex-end !important;
+}
+
+.ttx-prompt-modal button {
+    padding: 10px 20px !important;
+    border: none !important;
+    border-radius: 6px !important;
+    font-size: 14px !important;
+    font-weight: 600 !important;
+    cursor: pointer !important;
+    transition: all 0.2s ease !important;
+}
+
+.ttx-prompt-modal-cancel {
+    background: #f5f5f5 !important;
+    color: #333 !important;
+}
+
+.ttx-prompt-modal-cancel:hover {
+    background: #e0e0e0 !important;
+}
+
+.ttx-prompt-modal-submit {
+    background: #0066ff !important;
+    color: #ffffff !important;
+}
+
+.ttx-prompt-modal-submit:hover {
+    background: #0052cc !important;
+}
+
+.ttx-prompt-modal-submit:disabled {
+    background: #ccc !important;
+    cursor: not-allowed !important;
+}

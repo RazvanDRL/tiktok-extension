@@ -186,6 +186,172 @@
         return null;
     };
 
+    const showPromptDialog = () => {
+        return new Promise((resolve, reject) => {
+            // Create modal overlay
+            const modal = document.createElement('div');
+            modal.className = 'ttx-prompt-modal';
+            modal.setAttribute('id', 'ttx-prompt-modal');
+
+            // Create modal content
+            const content = document.createElement('div');
+            content.className = 'ttx-prompt-modal-content';
+
+            // Create title
+            const title = document.createElement('h3');
+            title.textContent = 'Enter Prompt';
+
+            // Create textarea
+            const textarea = document.createElement('textarea');
+            textarea.setAttribute('id', 'ttx-prompt-input');
+            textarea.setAttribute('placeholder', 'Enter your prompt here...');
+            textarea.setAttribute('rows', '10');
+            textarea.value = "you are the world's most intuitive visual communicator and expert prompt engineer. You possess a deep understanding of cinematic language, narrative structure, emotional resonance, the critical concept of filmic coverage and the specific capabilities of the sora 2 model. Your mission is to transform my conceptual ideas into meticulously crafted, narrative-style text-to-video prompts that are visually breathtaking and technically precise. create a json explaining this style in detailes, besides that ignore the text,    please make it softer detail more pixel noise lower dynamic range slightly compressed audio harsher blown highlights";
+
+            // Create options container
+            const optionsContainer = document.createElement('div');
+            optionsContainer.className = 'ttx-prompt-modal-options';
+
+            // Number of videos dropdown
+            const countLabel = document.createElement('label');
+            countLabel.className = 'ttx-prompt-modal-label';
+            countLabel.textContent = 'Number of videos';
+            const countSelect = document.createElement('select');
+            countSelect.className = 'ttx-prompt-modal-select';
+            countSelect.setAttribute('id', 'ttx-count-select');
+            for (let i = 1; i <= 5; i++) {
+                const option = document.createElement('option');
+                option.value = i;
+                option.textContent = `${i} video${i > 1 ? 's' : ''}`;
+                if (i === 1) option.selected = true;
+                countSelect.appendChild(option);
+            }
+            const countGroup = document.createElement('div');
+            countGroup.className = 'ttx-prompt-modal-field-group';
+            countGroup.appendChild(countLabel);
+            countGroup.appendChild(countSelect);
+
+            // Duration dropdown
+            const durationLabel = document.createElement('label');
+            durationLabel.className = 'ttx-prompt-modal-label';
+            durationLabel.textContent = 'Duration';
+            const durationSelect = document.createElement('select');
+            durationSelect.className = 'ttx-prompt-modal-select';
+            durationSelect.setAttribute('id', 'ttx-duration-select');
+            const durations = [
+                { value: 4, text: '4 seconds' },
+                { value: 8, text: '8 seconds' },
+                { value: 12, text: '12 seconds' }
+            ];
+            durations.forEach(d => {
+                const option = document.createElement('option');
+                option.value = d.value;
+                option.textContent = d.text;
+                if (d.value === 8) option.selected = true;
+                durationSelect.appendChild(option);
+            });
+            const durationGroup = document.createElement('div');
+            durationGroup.className = 'ttx-prompt-modal-field-group';
+            durationGroup.appendChild(durationLabel);
+            durationGroup.appendChild(durationSelect);
+
+            // Size / Aspect Ratio dropdown
+            const sizeLabel = document.createElement('label');
+            sizeLabel.className = 'ttx-prompt-modal-label';
+            sizeLabel.textContent = 'Size / Aspect Ratio';
+            const sizeSelect = document.createElement('select');
+            sizeSelect.className = 'ttx-prompt-modal-select';
+            sizeSelect.setAttribute('id', 'ttx-size-select');
+            const sizes = [
+                { value: '720x1280', text: '720x1280 (9:16)' },
+                { value: '1280x720', text: '1280x720 (16:9)' },
+                { value: '1024x1792', text: '1024x1792 (9:16 HD)' },
+                { value: '1792x1024', text: '1792x1024 (16:9 HD)' }
+            ];
+            sizes.forEach(s => {
+                const option = document.createElement('option');
+                option.value = s.value;
+                option.textContent = s.text;
+                if (s.value === '720x1280') option.selected = true;
+                sizeSelect.appendChild(option);
+            });
+            const sizeGroup = document.createElement('div');
+            sizeGroup.className = 'ttx-prompt-modal-field-group';
+            sizeGroup.appendChild(sizeLabel);
+            sizeGroup.appendChild(sizeSelect);
+
+            optionsContainer.appendChild(countGroup);
+            optionsContainer.appendChild(durationGroup);
+            optionsContainer.appendChild(sizeGroup);
+
+            // Create buttons container
+            const buttons = document.createElement('div');
+            buttons.className = 'ttx-prompt-modal-buttons';
+
+            // Create cancel button
+            const cancelBtn = document.createElement('button');
+            cancelBtn.className = 'ttx-prompt-modal-cancel';
+            cancelBtn.textContent = 'Cancel';
+            cancelBtn.addEventListener('click', () => {
+                document.body.removeChild(modal);
+                reject(new Error('Cancelled by user'));
+            });
+
+            // Create submit button
+            const submitBtn = document.createElement('button');
+            submitBtn.className = 'ttx-prompt-modal-submit';
+            submitBtn.textContent = 'Submit';
+            submitBtn.addEventListener('click', () => {
+                const prompt = textarea.value.trim();
+                const count = parseInt(countSelect.value);
+                const duration = parseInt(durationSelect.value);
+                const size = sizeSelect.value;
+                document.body.removeChild(modal);
+                resolve({
+                    prompt: prompt,
+                    count: count,
+                    duration: duration,
+                    size: size
+                });
+            });
+
+            // Allow Enter key to submit (Ctrl/Cmd + Enter)
+            textarea.addEventListener('keydown', (e) => {
+                if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+                    submitBtn.click();
+                }
+                if (e.key === 'Escape') {
+                    cancelBtn.click();
+                }
+            });
+
+            // Assemble modal
+            buttons.appendChild(cancelBtn);
+            buttons.appendChild(submitBtn);
+            content.appendChild(title);
+            content.appendChild(textarea);
+            content.appendChild(optionsContainer);
+            content.appendChild(buttons);
+            modal.appendChild(content);
+
+            // Add to page
+            document.body.appendChild(modal);
+
+            // Focus textarea and select all text for easy replacement
+            setTimeout(() => {
+                textarea.focus();
+                textarea.select();
+            }, 100);
+
+            // Close on backdrop click
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) {
+                    cancelBtn.click();
+                }
+            });
+        });
+    };
+
     async function handleClick() {
         // First, try to get URL from current page URL
         let url = getVideoUrlFromCurrentPage();
@@ -222,35 +388,30 @@
             return;
         }
 
+        // Show prompt dialog before proceeding
+        let dialogResult;
         try {
-            // Get user ID and token from auth storage
-            const storageData = await new Promise((resolve, reject) => {
-                chrome.storage.local.get(['firebaseAuthToken', 'firebaseUser'], (result) => {
-                    if (chrome.runtime.lastError) {
-                        reject(new Error(chrome.runtime.lastError.message));
-                        return;
-                    }
-                    resolve(result);
-                });
-            });
-
-            const userId = storageData.firebaseUser?.uid;
-            const token = storageData.firebaseAuthToken;
-
-            // Log user ID and token to console to verify they stay the same
-            console.log('[TikTok Extension] User ID:', userId);
-            console.log('[TikTok Extension] Auth Token:', token ? `${token.substring(0, 20)}...` : 'No token');
-
-            if (!userId || !token) {
-                console.error('[TikTok Extension] Missing auth credentials');
-                alert('Authentication required. Please sign in through the extension popup.');
+            dialogResult = await showPromptDialog();
+        } catch (error) {
+            if (error.message === 'Cancelled by user') {
+                console.log('[TikTok Extension] User cancelled prompt dialog');
                 return;
             }
+            throw error;
+        }
 
+        const { prompt, count, duration, size } = dialogResult;
+
+        try {
             // Send message to background script to handle the API request (bypasses CORS)
+            // The background script will handle authentication internally
             const response = await chrome.runtime.sendMessage({
                 action: 'downloadVideo',
-                url: url
+                url: url,
+                prompt: prompt,
+                count: count,
+                duration: duration,
+                size: size
             });
 
             // Check if response exists (background script might not be ready)
