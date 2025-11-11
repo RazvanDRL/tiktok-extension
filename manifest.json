@@ -1,0 +1,37 @@
+{
+    "manifest_version": 3,
+    "name": "TikTok Video Helper",
+    "version": "0.1.0",
+    "description": "Adds a floating download button to TikTok videos.",
+    "host_permissions": [
+        "https://www.tiktok.com/*",
+        "http://localhost:3000/*",
+        "https://3ff8ea93b701.ngrok-free.app/*",
+        "https://*.firebaseapp.com/*",
+        "https://*.googleapis.com/*"
+    ],
+    "permissions": [
+        "identity",
+        "storage"
+    ],
+    "background": {
+        "service_worker": "src/background.js"
+    },
+    "action": {
+        "default_popup": "src/popup.html"
+    },
+    "content_scripts": [
+        {
+            "matches": [
+                "<all_urls>"
+            ],
+            "js": [
+                "src/content.js"
+            ],
+            "css": [
+                "src/content.css"
+            ],
+            "run_at": "document_idle"
+        }
+    ]
+}
