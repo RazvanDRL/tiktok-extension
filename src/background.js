@@ -43,7 +43,7 @@ async function getAuthToken() {
     // Always try to refresh token from popup first (before every request)
     try {
         const freshToken = await requestFreshTokenFromPopup();
-        if (freshToken && freshToken.length >= 100) {
+        if (freshToken && typeof freshToken === 'string' && freshToken.length >= 100) {
             // Store fresh token with timestamp
             await chrome.storage.local.set({
                 firebaseAuthToken: freshToken,
@@ -52,11 +52,12 @@ async function getAuthToken() {
             console.log('[TikTok Extension] Background: Refreshed token from popup before request');
             return freshToken;
         } else {
+            console.error('[TikTok Extension] Background: Invalid token received from popup:', typeof freshToken, freshToken?.length);
             throw new Error('Invalid token received from popup');
         }
     } catch (error) {
         // If popup is not available, check if we have a stored token
-        if (error.message.includes('Popup not available')) {
+        if (error.message.includes('Popup not available') || chrome.runtime.lastError) {
             console.warn('[TikTok Extension] Background: Popup not available, checking stored token...');
 
             // Get stored token as fallback
@@ -70,7 +71,14 @@ async function getAuthToken() {
                 });
             });
 
-            if (!stored.firebaseAuthToken) {
+            console.log('[TikTok Extension] Background: Stored token check:', {
+                hasToken: !!stored.firebaseAuthToken,
+                tokenLength: stored.firebaseAuthToken?.length,
+                timestamp: stored.firebaseTokenTimestamp,
+                isExpired: isTokenLikelyExpired(stored.firebaseTokenTimestamp)
+            });
+
+            if (!stored.firebaseAuthToken || typeof stored.firebaseAuthToken !== 'string') {
                 throw new Error('User not authenticated. Please open the extension popup and sign in.');
             }
 
@@ -79,11 +87,17 @@ async function getAuthToken() {
                 throw new Error('Token expired. Please open the extension popup to refresh your session.');
             }
 
+            // Verify token format
+            if (stored.firebaseAuthToken.length < 100) {
+                throw new Error('Stored token appears invalid. Please sign in again.');
+            }
+
             console.warn('[TikTok Extension] Background: Using stored token (popup unavailable, but token still valid)');
             return stored.firebaseAuthToken;
         }
 
         // For other errors, rethrow
+        console.error('[TikTok Extension] Background: Error getting token:', error);
         throw error;
     }
 }
@@ -183,9 +197,11 @@ async function downloadVideo(url, prompt = '', count = 1, duration = 8, size = '
     try {
         authToken = await getAuthToken(); // This will refresh the token from popup before returning
         console.log('[TikTok Extension] Background: Got refreshed auth token, length:', authToken?.length);
+        console.log('[TikTok Extension] Background: Token preview:', authToken ? `${authToken.substring(0, 20)}...` : 'null/undefined');
 
         // Verify token is not empty
         if (!authToken || authToken.length < 100) {
+            console.error('[TikTok Extension] Background: Token validation failed - token:', authToken);
             throw new Error('Invalid auth token received');
         }
     } catch (error) {
@@ -213,13 +229,26 @@ async function downloadVideo(url, prompt = '', count = 1, duration = 8, size = '
 
         console.log('[TikTok Extension] Background: Request body:', JSON.stringify(requestBody, null, 2));
 
+        // Verify token is still valid before making request
+        if (!authToken || typeof authToken !== 'string' || authToken.trim().length === 0) {
+            throw new Error('Auth token is missing or invalid. Please sign in again.');
+        }
+
+        const headers = {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${authToken}`,
+        };
+
+        console.log('[TikTok Extension] Background: Request headers:', {
+            'Accept': headers['Accept'],
+            'Content-Type': headers['Content-Type'],
+            'Authorization': `Bearer ${authToken.substring(0, 20)}...`
+        });
+
         const response = await fetch(baseUrl, {
             method: 'POST',
-            headers: {
-                'Accept': 'application/json',
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${authToken}`,
-            },
+            headers: headers,
             body: JSON.stringify(requestBody),
         });
 
