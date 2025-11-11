@@ -6,7 +6,7 @@
     "host_permissions": [
         "https://www.tiktok.com/*",
         "http://localhost:3000/*",
-        "https://3ff8ea93b701.ngrok-free.app/*",
+        "https://adloops.ai/*",
         "https://*.firebaseapp.com/*",
         "https://*.googleapis.com/*"
     ],

@@ -163,7 +163,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 // EIUxJKygORXCXDU8AkN5dwDro943
 
 async function downloadVideo(url, prompt = '', count = 1, duration = 8, size = '720x1280') {
-    const baseUrl = "https://bfbc87332dac.ngrok-free.app/api/ai-videos/generate-from-tiktok";
+    const baseUrl = "https://adloops.ai/api/ai-videos/generate-from-tiktok";
 
     console.log('[TikTok Extension] Background: Making request to:', baseUrl);
     console.log('[TikTok Extension] Background: Video URL:', url);
@@ -219,8 +219,6 @@ async function downloadVideo(url, prompt = '', count = 1, duration = 8, size = '
                 'Accept': 'application/json',
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${authToken}`,
-                // ngrok sometimes requires this header
-                'ngrok-skip-browser-warning': 'true'
             },
             body: JSON.stringify(requestBody),
         });
