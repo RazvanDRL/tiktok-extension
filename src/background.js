@@ -171,6 +171,40 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         return false;
     }
 
+    if (request.action === 'diagnostics') {
+        // Run diagnostic tests to help troubleshoot issues
+        (async () => {
+            const diagnostics = {
+                timestamp: new Date().toISOString(),
+                userAgent: navigator.userAgent,
+                online: navigator.onLine,
+                results: {}
+            };
+
+            // Check auth token
+            try {
+                const stored = await new Promise((resolve) => {
+                    chrome.storage.local.get(['firebaseAuthToken', 'firebaseTokenTimestamp', 'firebaseUser'], resolve);
+                });
+                diagnostics.results.authToken = {
+                    exists: !!stored.firebaseAuthToken,
+                    length: stored.firebaseAuthToken?.length || 0,
+                    timestamp: stored.firebaseTokenTimestamp,
+                    age: stored.firebaseTokenTimestamp ? Date.now() - stored.firebaseTokenTimestamp : null,
+                    isExpired: isTokenLikelyExpired(stored.firebaseTokenTimestamp),
+                    userExists: !!stored.firebaseUser,
+                    userId: stored.firebaseUser?.uid || null
+                };
+            } catch (error) {
+                diagnostics.results.authToken = { error: error.message };
+            }
+
+            console.log('[TikTok Extension] Background: Diagnostics:', JSON.stringify(diagnostics, null, 2));
+            sendResponse({ success: true, diagnostics });
+        })();
+        return true;
+    }
+
     return false;
 });
 
@@ -246,31 +280,89 @@ async function downloadVideo(url, prompt = '', count = 1, duration = 8, size = '
         });
 
         let response;
+
+        // Add timeout to fetch request (240 seconds)
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 240000);
+
         try {
+            console.log('[TikTok Extension] Background: Initiating fetch request...');
+            console.log('[TikTok Extension] Background: Extension ID:', chrome.runtime.id);
+            console.log('[TikTok Extension] Background: User-Agent:', navigator.userAgent);
+
+            // For Chrome extensions, we can make requests without CORS restrictions
+            // However, fetch API still sends OPTIONS preflight for custom headers
+            // The browser will automatically send an OPTIONS request first (preflight)
+            // If OPTIONS fails or doesn't return proper CORS headers, the POST will fail
+            // This is why it might work on one computer (cached OPTIONS response) but not another
             response = await fetch(baseUrl, {
                 method: 'POST',
                 headers: headers,
                 body: JSON.stringify(requestBody),
+                signal: controller.signal,
+                // Remove explicit CORS mode - let Chrome extension handle it natively
+                // This should reduce preflight issues
+                credentials: 'omit',
+                // Don't set mode explicitly - Chrome extensions bypass CORS by default
             });
+            clearTimeout(timeoutId);
+            console.log('[TikTok Extension] Background: Fetch completed successfully');
         } catch (fetchError) {
+            clearTimeout(timeoutId);
             console.error('[TikTok Extension] Background: Fetch failed:', fetchError);
-            // Check if it's a network error
-            if (fetchError.name === 'TypeError' && (fetchError.message.includes('Failed to fetch') || fetchError.message.includes('NetworkError'))) {
-                throw new Error(`Network error: Could not connect to ${baseUrl}. Please check your internet connection and ensure the server is accessible.`);
+            console.error('[TikTok Extension] Background: Fetch error details:', {
+                name: fetchError.name,
+                message: fetchError.message,
+                stack: fetchError.stack
+            });
+
+            if (fetchError.name === 'AbortError') {
+                throw new Error('Request timed out after 240 seconds. The server may be slow or unreachable.');
             }
-            throw fetchError;
+
+            // Check if it's a CORS error
+            if (fetchError.message && (fetchError.message.includes('CORS') || fetchError.message.includes('Failed to fetch'))) {
+                const extensionId = chrome.runtime.id;
+                throw new Error(
+                    `CORS Error: The server at ${baseUrl} is not properly handling OPTIONS preflight requests.\n\n` +
+                    `⚠️ This is a SERVER-SIDE issue that needs to be fixed by the adloops.ai administrator.\n\n` +
+                    `The browser sends an OPTIONS request first (preflight) before the actual POST request.\n` +
+                    `The server MUST respond to OPTIONS requests with these CORS headers:\n` +
+                    `• Access-Control-Allow-Origin: chrome-extension://${extensionId}\n` +
+                    `• Access-Control-Allow-Methods: POST, OPTIONS\n` +
+                    `• Access-Control-Allow-Headers: Content-Type, Authorization, Accept\n` +
+                    `• Access-Control-Max-Age: 86400 (optional, for caching)\n\n` +
+                    `If OPTIONS requests keep failing, the POST request will never be sent.\n\n` +
+                    `Extension ID: ${extensionId}\n` +
+                    `Share this information with the server administrator.\n\n` +
+                    `💡 Note: This might work on some computers if the browser cached a successful OPTIONS response, ` +
+                    `but will fail on others where the cache is cleared or the browser is stricter.`
+                );
+            }
+
+            // Network error or other issue
+            throw new Error(`Network error: ${fetchError.message}. Please check your internet connection and ensure the server (${baseUrl}) is accessible.`);
         }
 
         console.log('[TikTok Extension] Background: Response status:', response.status);
+        console.log('[TikTok Extension] Background: Response headers:', Object.fromEntries(response.headers.entries()));
 
         if (!response.ok) {
             let errorText = 'Unknown error';
+            let errorDetails = null;
             try {
-                errorText = await response.text();
+                const contentType = response.headers.get('content-type');
+                if (contentType && contentType.includes('application/json')) {
+                    errorDetails = await response.json();
+                    errorText = errorDetails.message || errorDetails.error || JSON.stringify(errorDetails);
+                } else {
+                    errorText = await response.text();
+                }
+                console.error('[TikTok Extension] Background: Error response body:', errorText);
             } catch (e) {
                 errorText = `HTTP ${response.status} ${response.statusText}`;
+                console.error('[TikTok Extension] Background: Could not parse error response:', e);
             }
-            console.error('[TikTok Extension] Background: Error response:', errorText);
             throw new Error(`Server error (${response.status}): ${errorText}`);
         }
 

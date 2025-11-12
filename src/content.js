@@ -3,6 +3,9 @@
     const BUTTON_CLASS = 'ttx-download-button';
     let observer;
 
+    // Default prompt constant
+    const DEFAULT_PROMPT = "you are the world's most intuitive visual communicator and expert prompt engineer. You possess a deep understanding of cinematic language, narrative structure, emotional resonance, the critical concept of filmic coverage and the specific capabilities of the sora 2 model. Your mission is to transform my conceptual ideas into meticulously crafted, narrative-style text-to-video prompts that are visually breathtaking and technically precise. create a json explaining this style in detailes, besides that ignore the text,    please make it softer detail more pixel noise lower dynamic range slightly compressed audio harsher blown highlights";
+
     const getActiveVideo = () => {
         // Always query fresh from the DOM
         const videos = Array.from(document.querySelectorAll('video'));
@@ -186,8 +189,13 @@
         return null;
     };
 
-    const showPromptDialog = () => {
-        return new Promise((resolve, reject) => {
+    const showPromptDialog = async () => {
+        return new Promise(async (resolve, reject) => {
+            // Load saved prompt and history from storage
+            const storage = await chrome.storage.local.get(['ttx_current_prompt', 'ttx_prompt_history']);
+            const savedPrompt = storage.ttx_current_prompt || DEFAULT_PROMPT;
+            const promptHistory = storage.ttx_prompt_history || [];
+
             // Create modal overlay
             const modal = document.createElement('div');
             modal.className = 'ttx-prompt-modal';
@@ -201,12 +209,77 @@
             const title = document.createElement('h3');
             title.textContent = 'Enter Prompt';
 
+            // Create header buttons container (for reset button)
+            const headerButtons = document.createElement('div');
+            headerButtons.className = 'ttx-prompt-modal-header-buttons';
+
+            // Create reset button
+            const resetBtn = document.createElement('button');
+            resetBtn.className = 'ttx-prompt-modal-reset';
+            resetBtn.textContent = 'Reset to Default';
+            resetBtn.addEventListener('click', () => {
+                textarea.value = DEFAULT_PROMPT;
+                // Save to storage immediately
+                chrome.storage.local.set({ ttx_current_prompt: DEFAULT_PROMPT });
+            });
+            headerButtons.appendChild(resetBtn);
+
+            // Create history section
+            const historySection = document.createElement('div');
+            historySection.className = 'ttx-prompt-modal-history';
+
+            if (promptHistory.length > 0) {
+                const historyLabel = document.createElement('label');
+                historyLabel.className = 'ttx-prompt-modal-label';
+                historyLabel.textContent = 'Prompt History';
+
+                const historySelect = document.createElement('select');
+                historySelect.className = 'ttx-prompt-modal-select';
+
+                // Add placeholder option
+                const placeholderOption = document.createElement('option');
+                placeholderOption.value = '';
+                placeholderOption.textContent = '-- Load from history --';
+                placeholderOption.selected = true;
+                historySelect.appendChild(placeholderOption);
+
+                // Add history items (most recent first)
+                promptHistory.slice().reverse().forEach((item, index) => {
+                    const option = document.createElement('option');
+                    option.value = index;
+                    const date = new Date(item.timestamp);
+                    const dateStr = date.toLocaleString();
+                    const promptPreview = item.prompt.substring(0, 60) + (item.prompt.length > 60 ? '...' : '');
+                    option.textContent = `${dateStr} - ${promptPreview}`;
+                    historySelect.appendChild(option);
+                });
+
+                // Load selected history item
+                historySelect.addEventListener('change', (e) => {
+                    if (e.target.value !== '') {
+                        const historyIndex = promptHistory.length - 1 - parseInt(e.target.value);
+                        const selectedItem = promptHistory[historyIndex];
+                        textarea.value = selectedItem.prompt;
+                        // Save to storage immediately
+                        chrome.storage.local.set({ ttx_current_prompt: selectedItem.prompt });
+                    }
+                });
+
+                historySection.appendChild(historyLabel);
+                historySection.appendChild(historySelect);
+            }
+
             // Create textarea
             const textarea = document.createElement('textarea');
             textarea.setAttribute('id', 'ttx-prompt-input');
             textarea.setAttribute('placeholder', 'Enter your prompt here...');
             textarea.setAttribute('rows', '10');
-            textarea.value = "you are the world's most intuitive visual communicator and expert prompt engineer. You possess a deep understanding of cinematic language, narrative structure, emotional resonance, the critical concept of filmic coverage and the specific capabilities of the sora 2 model. Your mission is to transform my conceptual ideas into meticulously crafted, narrative-style text-to-video prompts that are visually breathtaking and technically precise. create a json explaining this style in detailes, besides that ignore the text,    please make it softer detail more pixel noise lower dynamic range slightly compressed audio harsher blown highlights";
+            textarea.value = savedPrompt;
+
+            // Save prompt to storage on change (to persist even if modal is closed)
+            textarea.addEventListener('input', () => {
+                chrome.storage.local.set({ ttx_current_prompt: textarea.value });
+            });
 
             // Create options container
             const optionsContainer = document.createElement('div');
@@ -293,6 +366,7 @@
             cancelBtn.className = 'ttx-prompt-modal-cancel';
             cancelBtn.textContent = 'Cancel';
             cancelBtn.addEventListener('click', () => {
+                // Prompt is already saved due to input listener
                 document.body.removeChild(modal);
                 reject(new Error('Cancelled by user'));
             });
@@ -301,11 +375,25 @@
             const submitBtn = document.createElement('button');
             submitBtn.className = 'ttx-prompt-modal-submit';
             submitBtn.textContent = 'Submit';
-            submitBtn.addEventListener('click', () => {
+            submitBtn.addEventListener('click', async () => {
                 const prompt = textarea.value.trim();
                 const count = parseInt(countSelect.value);
                 const duration = parseInt(durationSelect.value);
                 const size = sizeSelect.value;
+
+                // Save to history
+                const newHistoryItem = {
+                    prompt: prompt,
+                    timestamp: Date.now()
+                };
+
+                // Add to history (keep last 20 items)
+                const updatedHistory = [...promptHistory, newHistoryItem].slice(-20);
+                await chrome.storage.local.set({
+                    ttx_prompt_history: updatedHistory,
+                    ttx_current_prompt: prompt
+                });
+
                 document.body.removeChild(modal);
                 resolve({
                     prompt: prompt,
@@ -329,6 +417,10 @@
             buttons.appendChild(cancelBtn);
             buttons.appendChild(submitBtn);
             content.appendChild(title);
+            content.appendChild(headerButtons);
+            if (promptHistory.length > 0) {
+                content.appendChild(historySection);
+            }
             content.appendChild(textarea);
             content.appendChild(optionsContainer);
             content.appendChild(buttons);
@@ -343,7 +435,7 @@
                 textarea.select();
             }, 100);
 
-            // Close on backdrop click
+            // Close on backdrop click - prompt is already saved
             modal.addEventListener('click', (e) => {
                 if (e.target === modal) {
                     cancelBtn.click();
@@ -405,6 +497,8 @@
         try {
             // Send message to background script to handle the API request (bypasses CORS)
             // The background script will handle authentication internally
+            console.log('[TikTok Extension] Sending download request to background script...');
+
             const response = await chrome.runtime.sendMessage({
                 action: 'downloadVideo',
                 url: url,
@@ -417,25 +511,53 @@
             // Check if response exists (background script might not be ready)
             if (!response) {
                 console.error('[TikTok Extension] No response from background script');
-                alert('Extension background script not ready. Please reload the page and try again.');
+                alert('❌ Extension background script not ready. Please reload the page and try again.');
                 return;
             }
 
             if (response.success) {
                 console.log('[TikTok Extension] Download successful:', response.data);
-                alert('Video download initiated successfully!');
+                alert('✅ Video download initiated successfully! Check the server for your processed video.');
             } else {
                 console.error('[TikTok Extension] Download failed:', response.error);
-                alert(`Download failed: ${response.error || 'Unknown error'}`);
+
+                // Provide more specific error messages
+                let errorMessage = response.error || 'Unknown error';
+
+                if (errorMessage.includes('Network error') || errorMessage.includes('Failed to fetch')) {
+                    errorMessage += '\n\n🔍 Troubleshooting:\n' +
+                        '• Check your internet connection\n' +
+                        '• Verify the server (adloops.ai) is accessible\n' +
+                        '• Check browser console for detailed error logs\n' +
+                        '• Try disabling VPN or firewall temporarily';
+                } else if (errorMessage.includes('auth') || errorMessage.includes('token')) {
+                    errorMessage += '\n\n🔑 Please open the extension popup and sign in again.';
+                } else if (errorMessage.includes('timeout')) {
+                    errorMessage += '\n\n⏱️ The server took too long to respond. Please try again.';
+                }
+
+                alert(`❌ Download failed:\n\n${errorMessage}`);
             }
         } catch (error) {
             console.error('[TikTok Extension] Error sending message:', error);
-            // Check if it's a connection error
-            if (error.message && error.message.includes('fetch')) {
-                alert('Network error: Could not connect to the download server. Please check your connection and ensure the server is running.');
-            } else {
-                alert(`Error: ${error.message || 'Failed to send download request'}`);
+            console.error('[TikTok Extension] Error stack:', error.stack);
+
+            // Provide detailed error information
+            let errorMessage = error.message || 'Failed to send download request';
+
+            if (error.message && (error.message.includes('fetch') || error.message.includes('Network'))) {
+                errorMessage = '❌ Network error: Could not connect to the server.\n\n' +
+                    '🔍 Troubleshooting:\n' +
+                    '• Check your internet connection\n' +
+                    '• Verify https://adloops.ai is accessible in your browser\n' +
+                    '• Check if any firewall or VPN is blocking the connection\n' +
+                    '• Open browser console (F12) for detailed error logs\n' +
+                    '• Try from a different network if possible';
+            } else if (error.message && error.message.includes('Extension context invalidated')) {
+                errorMessage = '❌ Extension was updated or reloaded.\n\nPlease reload this page and try again.';
             }
+
+            alert(errorMessage);
         }
     };
 
@@ -527,5 +649,44 @@
     } else {
         init();
     }
+
+    // Add global diagnostic function for troubleshooting
+    window.TTX_DIAGNOSTICS = async function () {
+        console.log('[TikTok Extension] Running diagnostics...');
+        try {
+            const response = await chrome.runtime.sendMessage({ action: 'diagnostics' });
+            if (response && response.success) {
+                console.log('%c[TikTok Extension] Diagnostics Report:', 'color: #4CAF50; font-weight: bold');
+                console.log('Timestamp:', response.diagnostics.timestamp);
+                console.log('Online:', response.diagnostics.online);
+                console.log('User Agent:', response.diagnostics.userAgent);
+                console.log('\n%cAuth Token Status:', 'color: #2196F3; font-weight: bold');
+                console.log(response.diagnostics.results.authToken);
+
+                // Display user-friendly summary
+                const tokenOk = response.diagnostics.results.authToken.exists && !response.diagnostics.results.authToken.isExpired;
+
+                console.log('\n%c=== Summary ===', 'color: #FF9800; font-weight: bold');
+                console.log(tokenOk ? '✅ Auth token is valid' : '❌ Auth token is missing or expired');
+                console.log(response.diagnostics.online ? '✅ Device is online' : '❌ Device appears offline');
+
+                if (!tokenOk) {
+                    console.log('\n%c🔍 Recommended Actions:', 'color: #F44336; font-weight: bold');
+                    console.log('• Open extension popup and sign in');
+                    console.log('• If already signed in, try signing out and back in');
+                }
+
+                return response.diagnostics;
+            } else {
+                console.error('[TikTok Extension] Failed to get diagnostics');
+                return null;
+            }
+        } catch (error) {
+            console.error('[TikTok Extension] Error running diagnostics:', error);
+            return null;
+        }
+    };
+
+    console.log('[TikTok Extension] 💡 Tip: Run TTX_DIAGNOSTICS() in the console to troubleshoot issues');
 })();
 
