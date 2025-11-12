@@ -174,8 +174,6 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     return false;
 });
 
-// EIUxJKygORXCXDU8AkN5dwDro943
-
 async function downloadVideo(url, prompt = '', count = 1, duration = 8, size = '720x1280') {
     const baseUrl = "https://adloops.ai/api/ai-videos/generate-from-tiktok";
 
@@ -187,7 +185,7 @@ async function downloadVideo(url, prompt = '', count = 1, duration = 8, size = '
     console.log('[TikTok Extension] Background: Size:', size);
 
     // Validate URL before making request
-    if (!url || typeof url !== 'string' || !url.includes('tiktok.com')) {
+    if (!url || typeof url !== 'string' || !url.includes('tiktok.com') || !url.includes('video/')) {
         throw new Error('Invalid TikTok URL provided');
     }
 
@@ -223,7 +221,8 @@ async function downloadVideo(url, prompt = '', count = 1, duration = 8, size = '
             duration: duration || 4,
             size: size || "720x1280",
             language: "english",
-            uploaded_by: user.name || user.email || 'User',
+            // uploaded_by: user.name || user.email || 'User',
+            uploaded_by: 'Mariusica',
             prompt: prompt || ''
         };
 
@@ -246,11 +245,21 @@ async function downloadVideo(url, prompt = '', count = 1, duration = 8, size = '
             'Authorization': `Bearer ${authToken.substring(0, 20)}...`
         });
 
-        const response = await fetch(baseUrl, {
-            method: 'POST',
-            headers: headers,
-            body: JSON.stringify(requestBody),
-        });
+        let response;
+        try {
+            response = await fetch(baseUrl, {
+                method: 'POST',
+                headers: headers,
+                body: JSON.stringify(requestBody),
+            });
+        } catch (fetchError) {
+            console.error('[TikTok Extension] Background: Fetch failed:', fetchError);
+            // Check if it's a network error
+            if (fetchError.name === 'TypeError' && (fetchError.message.includes('Failed to fetch') || fetchError.message.includes('NetworkError'))) {
+                throw new Error(`Network error: Could not connect to ${baseUrl}. Please check your internet connection and ensure the server is accessible.`);
+            }
+            throw fetchError;
+        }
 
         console.log('[TikTok Extension] Background: Response status:', response.status);
 
@@ -269,12 +278,9 @@ async function downloadVideo(url, prompt = '', count = 1, duration = 8, size = '
         console.log('[TikTok Extension] Background: Response data received');
         return data;
     } catch (error) {
-        console.error('[TikTok Extension] Background: Fetch error:', error);
-
-        // Provide more specific error messages
-        if (error.name === 'TypeError' && error.message.includes('fetch')) {
-            throw new Error('Network error: Could not connect to server. Please check if the server is running and the ngrok tunnel is active.');
-        } else if (error.message) {
+        console.error('[TikTok Extension] Background: Error:', error);
+        // If error already has a message, use it; otherwise provide a generic one
+        if (error.message) {
             throw error;
         } else {
             throw new Error('Unknown error occurred while downloading video');
