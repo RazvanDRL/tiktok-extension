@@ -290,20 +290,12 @@ async function downloadVideo(url, prompt = '', count = 1, duration = 8, size = '
             console.log('[TikTok Extension] Background: Extension ID:', chrome.runtime.id);
             console.log('[TikTok Extension] Background: User-Agent:', navigator.userAgent);
 
-            // For Chrome extensions, we can make requests without CORS restrictions
-            // However, fetch API still sends OPTIONS preflight for custom headers
-            // The browser will automatically send an OPTIONS request first (preflight)
-            // If OPTIONS fails or doesn't return proper CORS headers, the POST will fail
-            // This is why it might work on one computer (cached OPTIONS response) but not another
             response = await fetch(baseUrl, {
                 method: 'POST',
                 headers: headers,
                 body: JSON.stringify(requestBody),
                 signal: controller.signal,
-                // Remove explicit CORS mode - let Chrome extension handle it natively
-                // This should reduce preflight issues
                 credentials: 'omit',
-                // Don't set mode explicitly - Chrome extensions bypass CORS by default
             });
             clearTimeout(timeoutId);
             console.log('[TikTok Extension] Background: Fetch completed successfully');
