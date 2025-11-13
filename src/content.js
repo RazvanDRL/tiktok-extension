@@ -520,44 +520,10 @@
                 alert('✅ Video download initiated successfully! Check the server for your processed video.');
             } else {
                 console.error('[TikTok Extension] Download failed:', response.error);
-
-                // Provide more specific error messages
-                let errorMessage = response.error || 'Unknown error';
-
-                if (errorMessage.includes('Network error') || errorMessage.includes('Failed to fetch')) {
-                    errorMessage += '\n\n🔍 Troubleshooting:\n' +
-                        '• Check your internet connection\n' +
-                        '• Verify the server (adloops.ai) is accessible\n' +
-                        '• Check browser console for detailed error logs\n' +
-                        '• Try disabling VPN or firewall temporarily';
-                } else if (errorMessage.includes('auth') || errorMessage.includes('token')) {
-                    errorMessage += '\n\n🔑 Please open the extension popup and sign in again.';
-                } else if (errorMessage.includes('timeout')) {
-                    errorMessage += '\n\n⏱️ The server took too long to respond. Please try again.';
-                }
-
-                alert(`❌ Download failed:\n\n${errorMessage}`);
             }
         } catch (error) {
             console.error('[TikTok Extension] Error sending message:', error);
             console.error('[TikTok Extension] Error stack:', error.stack);
-
-            // Provide detailed error information
-            let errorMessage = error.message || 'Failed to send download request';
-
-            if (error.message && (error.message.includes('fetch') || error.message.includes('Network'))) {
-                errorMessage = '❌ Network error: Could not connect to the server.\n\n' +
-                    '🔍 Troubleshooting:\n' +
-                    '• Check your internet connection\n' +
-                    '• Verify https://adloops.ai is accessible in your browser\n' +
-                    '• Check if any firewall or VPN is blocking the connection\n' +
-                    '• Open browser console (F12) for detailed error logs\n' +
-                    '• Try from a different network if possible';
-            } else if (error.message && error.message.includes('Extension context invalidated')) {
-                errorMessage = '❌ Extension was updated or reloaded.\n\nPlease reload this page and try again.';
-            }
-
-            alert(errorMessage);
         }
     };
 
