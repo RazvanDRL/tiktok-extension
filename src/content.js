@@ -561,12 +561,145 @@
         }
     };
 
+    const handleDownloadClick = async () => {
+        try {
+            // Get the current video URL
+            let url = getVideoUrlFromCurrentPage();
+
+            // If not found in URL, fall back to DOM extraction
+            if (!url) {
+                const video = getActiveVideo();
+                const username = getCurrentVideoUsername();
+                const videoId = getCurrentVideoId();
+
+                if (!video) {
+                    console.warn('[TikTok Extension] No video element found for download action.');
+                    alert('No video found on this page. Please navigate to a TikTok video page.');
+                    return;
+                }
+                if (!username) {
+                    console.warn('[TikTok Extension] No username found for download action.');
+                    alert('Could not extract username. Please ensure you are on a TikTok video page.');
+                    return;
+                }
+                if (!videoId) {
+                    console.warn('[TikTok Extension] No video ID found for download action.');
+                    alert('Could not extract video ID. Please ensure you are on a TikTok video page.');
+                    return;
+                }
+
+                url = `https://www.tiktok.com/@${username}/video/${videoId}`;
+            }
+
+            // Validate URL format
+            if (!url || !url.includes('tiktok.com') || !url.includes('/video/')) {
+                console.error('[TikTok Extension] Invalid URL:', url);
+                alert('Invalid TikTok video URL. Please ensure you are on a TikTok video page.');
+                return;
+            }
+
+            // Check if chrome.runtime is available
+            if (typeof chrome === 'undefined' || typeof chrome.runtime === 'undefined') {
+                throw new Error('Chrome extension APIs are not available. Please reload the extension and refresh this page.');
+            }
+
+            // Send message to background script to handle the API request (bypasses CORS and mixed content)
+            console.log('[TikTok Extension] Sending download API request to background script...');
+
+            const response = await new Promise((resolve, reject) => {
+                try {
+                    chrome.runtime.sendMessage({
+                        action: 'downloadApi',
+                        url: url
+                    }, (response) => {
+                        if (chrome.runtime.lastError) {
+                            reject(new Error(chrome.runtime.lastError.message));
+                        } else {
+                            resolve(response);
+                        }
+                    });
+                } catch (error) {
+                    reject(error);
+                }
+            });
+
+            // Check if response exists (background script might not be ready)
+            if (!response) {
+                console.error('[TikTok Extension] No response from background script');
+                alert('❌ Extension background script not ready. Please reload the page and try again.');
+                return;
+            }
+
+            if (response.success) {
+                console.log('[TikTok Extension] Download API successful:', response.data);
+                const downloadUrl =
+                    (response.data && (response.data.url || response.data.downloadUrl || response.data.link || response.data.download_url)) ||
+                    response.url ||
+                    response.link ||
+                    null;
+
+                if (downloadUrl) {
+                    console.log('[TikTok Extension] Starting browser download for:', downloadUrl);
+                    try {
+                        const dlResponse = await new Promise((resolve, reject) => {
+                            try {
+                                chrome.runtime.sendMessage({ action: 'startDownload', url: downloadUrl }, (resp) => {
+                                    if (chrome.runtime.lastError) {
+                                        reject(new Error(chrome.runtime.lastError.message));
+                                    } else {
+                                        resolve(resp);
+                                    }
+                                });
+                            } catch (e) {
+                                reject(e);
+                            }
+                        });
+                        if (dlResponse && dlResponse.success) {
+                            console.log('[TikTok Extension] Download started. ID:', dlResponse.downloadId);
+                        } else {
+                            console.warn('[TikTok Extension] Could not start download via API. Opening link instead.', dlResponse?.error);
+                            window.open(downloadUrl, '_blank');
+                        }
+                    } catch (e) {
+                        console.warn('[TikTok Extension] Download API messaging failed. Opening link instead.', e);
+                        window.open(downloadUrl, '_blank');
+                    }
+                }
+            } else {
+                console.error('[TikTok Extension] Download API failed:', response.error);
+                alert(`❌ Download failed: ${response.error}. Please try again.`);
+            }
+        } catch (error) {
+            console.error('[TikTok Extension] Error sending message:', error);
+            console.error('[TikTok Extension] Error stack:', error.stack);
+
+            // Provide detailed error information
+            let errorMessage = error.message || 'Failed to send download request';
+
+            if (error.message && error.message.includes('Extension context invalidated')) {
+                errorMessage = '❌ Extension was updated or reloaded.\n\nPlease reload this page and try again.';
+            } else if (error.message && error.message.includes('Chrome extension APIs are not available')) {
+                errorMessage = '❌ Extension APIs not available.\n\nPlease:\n1. Reload the extension in chrome://extensions\n2. Refresh this page\n3. Try again';
+            } else if (error.message && (error.message.includes('sendMessage') || error.message.includes('runtime'))) {
+                errorMessage = '❌ Cannot communicate with extension background script.\n\nPlease reload the extension and refresh this page.';
+            }
+
+            alert(`❌ Download failed: ${errorMessage}. Please try again.`);
+        }
+    };
+
     const createButton = () => {
-        const button = document.createElement('button');
-        button.id = BUTTON_ID;
-        button.type = 'button';
-        button.className = BUTTON_CLASS;
-        button.setAttribute('aria-label', 'Download video');
+        // Create container for both buttons
+        const container = document.createElement('div');
+        container.className = 'ttx-buttons-container';
+        container.id = 'ttx-buttons-container';
+
+        // Create copy/download button
+        const copyButton = document.createElement('button');
+        copyButton.id = BUTTON_ID;
+        copyButton.type = 'button';
+        copyButton.className = BUTTON_CLASS;
+        copyButton.setAttribute('aria-label', 'Copy video');
 
         // Create content container div
         const contentDiv = document.createElement('div');
@@ -605,10 +738,62 @@
         svg.appendChild(path);
         iconContainer.appendChild(svg);
         contentDiv.appendChild(iconContainer);
-        button.appendChild(contentDiv);
+        copyButton.appendChild(contentDiv);
+        copyButton.addEventListener('click', handleClick);
 
-        button.addEventListener('click', handleClick);
-        return button;
+        // Create download button
+        const downloadButton = document.createElement('button');
+        downloadButton.id = 'ttx-download-api-button';
+        downloadButton.type = 'button';
+        downloadButton.className = 'ttx-download-button ttx-download-api-button';
+        downloadButton.setAttribute('aria-label', 'Download via API');
+
+        // Create content container div for download button
+        const downloadContentDiv = document.createElement('div');
+        downloadContentDiv.className = 'TUXButton-content';
+
+        // Create icon container div for download button
+        const downloadIconContainer = document.createElement('div');
+        downloadIconContainer.className = 'TUXButton-iconContainer';
+
+        // Create download SVG icon
+        const downloadSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+        downloadSvg.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+        downloadSvg.setAttribute('width', '24');
+        downloadSvg.setAttribute('height', '24');
+        downloadSvg.setAttribute('viewBox', '0 0 24 24');
+        downloadSvg.setAttribute('fill', 'none');
+        downloadSvg.setAttribute('stroke', 'currentColor');
+        downloadSvg.setAttribute('stroke-width', '2');
+        downloadSvg.setAttribute('stroke-linecap', 'round');
+        downloadSvg.setAttribute('stroke-linejoin', 'round');
+
+        // Download icon path
+        const downloadPath1 = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        downloadPath1.setAttribute('d', 'M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4');
+
+        const downloadPath2 = document.createElementNS('http://www.w3.org/2000/svg', 'polyline');
+        downloadPath2.setAttribute('points', '7 10 12 15 17 10');
+
+        const downloadPath3 = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+        downloadPath3.setAttribute('x1', '12');
+        downloadPath3.setAttribute('y1', '15');
+        downloadPath3.setAttribute('x2', '12');
+        downloadPath3.setAttribute('y2', '3');
+
+        downloadSvg.appendChild(downloadPath1);
+        downloadSvg.appendChild(downloadPath2);
+        downloadSvg.appendChild(downloadPath3);
+        downloadIconContainer.appendChild(downloadSvg);
+        downloadContentDiv.appendChild(downloadIconContainer);
+        downloadButton.appendChild(downloadContentDiv);
+        downloadButton.addEventListener('click', handleDownloadClick);
+
+        // Add both buttons to container
+        container.appendChild(copyButton);
+        container.appendChild(downloadButton);
+
+        return container;
     };
 
     const ensureButton = () => {
@@ -616,11 +801,11 @@
             return;
         }
 
-        let button = document.getElementById(BUTTON_ID);
-        if (!button) {
-            button = createButton();
+        let container = document.getElementById('ttx-buttons-container');
+        if (!container) {
+            container = createButton();
             // Append directly to body - works on any page
-            document.body.appendChild(button);
+            document.body.appendChild(container);
         }
     };
 

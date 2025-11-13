@@ -1,9 +1,16 @@
-/* Download button - top right, blue, always on top */
-.ttx-download-button {
+/* Buttons container - top right, always on top */
+.ttx-buttons-container {
     position: fixed !important;
     top: 16px !important;
     right: 16px !important;
     z-index: 2147483647 !important;
+    display: flex !important;
+    gap: 12px !important;
+    align-items: center !important;
+}
+
+/* Download button - blue, always on top */
+.ttx-download-button {
     width: 48px !important;
     height: 48px !important;
     padding: 0 !important;
@@ -29,6 +36,21 @@
 .ttx-download-button:active {
     transform: scale(0.95) !important;
     box-shadow: 0 2px 8px rgba(0, 102, 255, 0.3) !important;
+}
+
+/* Download API button - green variant */
+.ttx-download-api-button {
+    background: #28a745 !important;
+    box-shadow: 0 4px 12px rgba(40, 167, 69, 0.4) !important;
+}
+
+.ttx-download-api-button:hover {
+    background: #218838 !important;
+    box-shadow: 0 6px 16px rgba(40, 167, 69, 0.5) !important;
+}
+
+.ttx-download-api-button:active {
+    box-shadow: 0 2px 8px rgba(40, 167, 69, 0.3) !important;
 }
 
 /* Button content container */

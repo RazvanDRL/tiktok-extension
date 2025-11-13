@@ -135,6 +135,50 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         return true; // Indicates we will send a response asynchronously
     }
 
+    if (request.action === 'downloadApi') {
+        console.log('[TikTok Extension] Background: Received download API request for URL:', request.url);
+        downloadApi(request.url)
+            .then(data => {
+                console.log('[TikTok Extension] Background: Download API successful');
+                sendResponse({ success: true, data });
+            })
+            .catch(error => {
+                console.error('[TikTok Extension] Background: Download API error:', error);
+                sendResponse({ success: false, error: error.message || 'Unknown error occurred' });
+            });
+        return true; // Indicates we will send a response asynchronously
+    }
+
+    if (request.action === 'startDownload') {
+        try {
+            if (!request.url || typeof request.url !== 'string') {
+                sendResponse({ success: false, error: 'Missing download URL' });
+                return false;
+            }
+            console.log('[TikTok Extension] Background: Starting browser download for URL:', request.url);
+            chrome.downloads.download(
+                {
+                    url: request.url,
+                    saveAs: false, // set true if you want the Save As dialog
+                    conflictAction: 'uniquify'
+                },
+                (downloadId) => {
+                    if (chrome.runtime.lastError) {
+                        console.error('[TikTok Extension] Background: downloads.download error:', chrome.runtime.lastError.message);
+                        sendResponse({ success: false, error: chrome.runtime.lastError.message });
+                        return;
+                    }
+                    console.log('[TikTok Extension] Background: Download started. ID:', downloadId);
+                    sendResponse({ success: true, downloadId });
+                }
+            );
+        } catch (e) {
+            console.error('[TikTok Extension] Background: Unexpected error starting download:', e);
+            sendResponse({ success: false, error: e.message || 'Failed to start download' });
+        }
+        return true;
+    }
+
     if (request.action === 'getAuthToken') {
         getAuthToken()
             .then(token => {
@@ -368,6 +412,95 @@ async function downloadVideo(url, prompt = '', count = 1, duration = 8, size = '
             throw error;
         } else {
             throw new Error('Unknown error occurred while downloading video');
+        }
+    }
+}
+
+async function downloadApi(url) {
+    const apiUrl = "http://49.13.217.93:9000";
+
+    console.log('[TikTok Extension] Background: Making download API request to:', apiUrl);
+    console.log('[TikTok Extension] Background: Video URL:', url);
+
+    // Validate URL format
+    if (!url || typeof url !== 'string' || !url.includes('tiktok.com') || !url.includes('/video/')) {
+        throw new Error('Invalid TikTok URL provided');
+    }
+
+    try {
+        const requestBody = {
+            url: url
+        };
+
+        console.log('[TikTok Extension] Background: Request body:', JSON.stringify(requestBody, null, 2));
+
+        const headers = {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json',
+        };
+
+        console.log('[TikTok Extension] Background: Request headers:', headers);
+
+        let response;
+
+        try {
+            console.log('[TikTok Extension] Background: Initiating fetch request...');
+            response = await fetch(apiUrl, {
+                method: 'POST',
+                headers: headers,
+                body: JSON.stringify(requestBody)
+            });
+            console.log('[TikTok Extension] Background: Fetch completed successfully');
+        } catch (fetchError) {
+            console.error('[TikTok Extension] Background: Fetch failed:', fetchError);
+            console.error('[TikTok Extension] Background: Fetch error details:', {
+                name: fetchError.name,
+                message: fetchError.message,
+                stack: fetchError.stack
+            });
+
+            // Check for SSL/protocol errors
+            if (fetchError.message && (fetchError.message.includes('SSL') || fetchError.message.includes('ERR_SSL_PROTOCOL_ERROR'))) {
+                throw new Error('SSL protocol error. The server may require HTTPS or have certificate issues. Please check the server configuration.');
+            }
+
+            // Network error or other issue
+            throw new Error(`Network error: ${fetchError.message}. Please check your internet connection and ensure the server (${apiUrl}) is accessible.`);
+        }
+
+        console.log('[TikTok Extension] Background: Response status:', response.status);
+        console.log('[TikTok Extension] Background: Response headers:', Object.fromEntries(response.headers.entries()));
+
+        if (!response.ok) {
+            let errorText = 'Unknown error';
+            let errorDetails = null;
+            try {
+                const contentType = response.headers.get('content-type');
+                if (contentType && contentType.includes('application/json')) {
+                    errorDetails = await response.json();
+                    errorText = errorDetails.message || errorDetails.error || JSON.stringify(errorDetails);
+                } else {
+                    errorText = await response.text();
+                }
+                console.error('[TikTok Extension] Background: Error response body:', errorText);
+            } catch (e) {
+                errorText = `HTTP ${response.status} ${response.statusText}`;
+                console.error('[TikTok Extension] Background: Could not parse error response:', e);
+            }
+            throw new Error(`Server error (${response.status}): ${errorText}`);
+        }
+
+        const data = await response.json();
+        console.log('[TikTok Extension] Background: Response data received:', data);
+
+        return data;
+    } catch (error) {
+        console.error('[TikTok Extension] Background: Error:', error);
+        // If error already has a message, use it; otherwise provide a generic one
+        if (error.message) {
+            throw error;
+        } else {
+            throw new Error('Unknown error occurred while making download API request');
         }
     }
 }

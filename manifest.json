@@ -8,11 +8,13 @@
         "http://localhost:3000/*",
         "https://adloops.ai/*",
         "https://*.firebaseapp.com/*",
-        "https://*.googleapis.com/*"
+        "https://*.googleapis.com/*",
+        "http://49.13.217.93:9000/*"
     ],
     "permissions": [
         "identity",
-        "storage"
+        "storage",
+        "downloads"
     ],
     "background": {
         "service_worker": "src/background.js"
