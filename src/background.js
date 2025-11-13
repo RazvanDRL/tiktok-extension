@@ -355,27 +355,6 @@ async function downloadVideo(url, prompt = '', count = 1, duration = 8, size = '
             if (fetchError.name === 'AbortError') {
                 throw new Error('Request timed out after 240 seconds. The server may be slow or unreachable.');
             }
-
-            // Check if it's a CORS error
-            if (fetchError.message && (fetchError.message.includes('CORS') || fetchError.message.includes('Failed to fetch'))) {
-                const extensionId = chrome.runtime.id;
-                throw new Error(
-                    `CORS Error: The server at ${baseUrl} is not properly handling OPTIONS preflight requests.\n\n` +
-                    `⚠️ This is a SERVER-SIDE issue that needs to be fixed by the adloops.ai administrator.\n\n` +
-                    `The browser sends an OPTIONS request first (preflight) before the actual POST request.\n` +
-                    `The server MUST respond to OPTIONS requests with these CORS headers:\n` +
-                    `• Access-Control-Allow-Origin: chrome-extension://${extensionId}\n` +
-                    `• Access-Control-Allow-Methods: POST, OPTIONS\n` +
-                    `• Access-Control-Allow-Headers: Content-Type, Authorization, Accept\n` +
-                    `• Access-Control-Max-Age: 86400 (optional, for caching)\n\n` +
-                    `If OPTIONS requests keep failing, the POST request will never be sent.\n\n` +
-                    `Extension ID: ${extensionId}\n` +
-                    `Share this information with the server administrator.\n\n` +
-                    `💡 Note: This might work on some computers if the browser cached a successful OPTIONS response, ` +
-                    `but will fail on others where the cache is cleared or the browser is stricter.`
-                );
-            }
-
             // Network error or other issue
             throw new Error(`Network error: ${fetchError.message}. Please check your internet connection and ensure the server (${baseUrl}) is accessible.`);
         }
