@@ -1,5 +1,4 @@
 import AuthForm from "~components/AuthForm"
-import { CountButton } from "~features/count-button"
 import useFirebaseUser from "~firebase/useFirebaseUser"
 
 import "~style.css"

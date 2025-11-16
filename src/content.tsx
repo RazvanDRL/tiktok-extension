@@ -1,7 +1,8 @@
 import cssText from "data-text:~style.css"
 import type { PlasmoCSConfig } from "plasmo"
 
-import { CountButton } from "~features/count-button"
+import { DownloadButton } from "~features/download-button"
+import { CopyButton } from "~features/copy-button"
 import { UrlDebug } from "~components/UrlDebug"
 
 export const config: PlasmoCSConfig = {
@@ -41,8 +42,9 @@ export const getStyle = (): HTMLStyleElement => {
 const PlasmoOverlay = () => {
   return (
     <div className="z-50 flex fixed top-4 right-8 items-start">
-      <CountButton />
-      <UrlDebug />
+      <CopyButton />
+      <DownloadButton />
+      {/* <UrlDebug /> */}
     </div>
   )
 }

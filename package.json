@@ -31,7 +31,12 @@
   },
   "manifest": {
     "host_permissions": [
-      "https://*/*"
+      "https://*/*",
+      "http://49.13.217.93:9000/*",
+      "https://adloops.ai/*"
+    ],
+    "permissions": [
+      "downloads"
     ]
   }
 }

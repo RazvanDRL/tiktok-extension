@@ -28,6 +28,18 @@ export default function useFirebaseUser() {
         }
     }
 
+    const getToken = async (forceRefresh = true): Promise<string | null> => {
+        if (!user) return null
+
+        try {
+            const token = await user.getIdToken(forceRefresh as boolean)
+            return token
+        } catch (error) {
+            console.error("Error getting token:", error)
+            return null
+        }
+    }
+
     const onLogin = () => {
         if (!user) return
 
@@ -64,6 +76,7 @@ export default function useFirebaseUser() {
         isLoading,
         user,
         onLogin,
-        onLogout
+        onLogout,
+        getToken
     }
 }
