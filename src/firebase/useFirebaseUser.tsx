@@ -13,7 +13,7 @@ import { auth } from "./firebaseClient"
 setPersistence(auth, browserLocalPersistence)
 
 export default function useFirebaseUser() {
-    const [isLoading, setIsLoading] = useState(false)
+    const [isLoading, setIsLoading] = useState(true)
     const [user, setUser] = useState<User | null>(null)
 
     const onLogout = async () => {
