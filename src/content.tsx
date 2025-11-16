@@ -2,6 +2,7 @@ import cssText from "data-text:~style.css"
 import type { PlasmoCSConfig } from "plasmo"
 
 import { CountButton } from "~features/count-button"
+import { UrlDebug } from "~components/UrlDebug"
 
 export const config: PlasmoCSConfig = {
   matches: ["<all_urls>"]
@@ -39,8 +40,9 @@ export const getStyle = (): HTMLStyleElement => {
 
 const PlasmoOverlay = () => {
   return (
-    <div className="z-50 flex fixed top-4 right-8">
+    <div className="z-50 flex fixed top-4 right-8 items-start">
       <CountButton />
+      <UrlDebug />
     </div>
   )
 }
