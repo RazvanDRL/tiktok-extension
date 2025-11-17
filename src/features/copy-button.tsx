@@ -12,6 +12,8 @@ export const CopyButton = () => {
     count: number
     duration: number
     size: string
+    fps: number
+    max_duration: number
   }) => {
     const url = getCurrentUrl()
 
@@ -27,7 +29,9 @@ export const CopyButton = () => {
         prompt: data.prompt,
         count: data.count,
         duration: data.duration,
-        size: data.size
+        size: data.size,
+        fps: data.fps,
+        max_duration: data.max_duration
       }
     })
 
@@ -42,7 +46,7 @@ export const CopyButton = () => {
     <>
       <button
         type="button"
-        className="flex items-center justify-center w-12 h-12 rounded-full bg-slate-50 hover:bg-slate-100 text-slate-800 hover:text-slate-900"
+        className="flex items-center justify-center w-12 h-12 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-slate-100 border border-slate-700"
         onClick={() => setIsDialogOpen(true)}
       >
         <Copy className="w-6 h-6" />

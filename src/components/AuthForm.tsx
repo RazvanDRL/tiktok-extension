@@ -29,27 +29,27 @@ export default function AuthForm() {
     return (
         <div className="flex items-center justify-center w-full p-4 overflow-x-hidden rounded-xl overflow-y-auto md:inset-0 h-[calc(100%-1rem)] max-h-full">
             <div className="w-full max-w-2xl max-h-full">
-                <div className="p-10 bg-white rounded-lg shadow">
+                <div className="p-10 bg-slate-900 border border-slate-700 rounded-lg shadow text-slate-100">
                     <div className="flex flex-row items-center justify-center">
                         {!isLoading && (
-                            <span className="text-black font-bold text-3xl text-center">
+                            <span className="text-slate-100 font-bold text-3xl text-center">
                                 {showLogin ? "Login" : "Sign Up"}
                             </span>
                         )}
                         {isLoading && (
-                            <span className="text-black font-bold text-3xl text-center">
+                            <span className="text-slate-100 font-bold text-3xl text-center">
                                 Loading...
                             </span>
                         )}
                     </div>
 
-                    <div className="p-4 rounded-xl bg-white text-black">
+                    <div className="p-4 rounded-xl bg-slate-900 text-slate-100">
                         {showLogin && !isLoading && (
                             <form className="space-y-4 md:space-y-6" onSubmit={signIn}>
                                 <div>
                                     <label
                                         htmlFor="email"
-                                        className="block mb-2 text-sm font-medium text-gray-900">
+                                        className="block mb-2 text-sm font-medium text-slate-200">
                                         Your email
                                     </label>
                                     <input
@@ -58,7 +58,7 @@ export default function AuthForm() {
                                         id="email"
                                         onChange={(e) => setEmail(e.target.value)}
                                         value={email}
-                                        className="bg-gray-50 border border-gray-300 text-gray-900 sm:text-sm rounded-lg focus:ring-primary-600 focus:border-primary-600 block w-full p-2.5"
+                                        className="bg-slate-800 border border-slate-700 text-slate-100 placeholder-slate-400 sm:text-sm rounded-lg focus:ring-blue-600 focus:border-blue-600 block w-full p-2.5"
                                         placeholder="name@company.com"
                                         required
                                     />
@@ -66,7 +66,7 @@ export default function AuthForm() {
                                 <div>
                                     <label
                                         htmlFor="password"
-                                        className="block mb-2 text-sm font-medium text-gray-900">
+                                        className="block mb-2 text-sm font-medium text-slate-200">
                                         Password
                                     </label>
                                     <input
@@ -76,13 +76,13 @@ export default function AuthForm() {
                                         onChange={(e) => setPassword(e.target.value)}
                                         value={password}
                                         placeholder="••••••••"
-                                        className="bg-gray-50 border border-gray-300 text-gray-900 sm:text-sm rounded-lg focus:ring-primary-600 focus:border-primary-600 block w-full p-2.5"
+                                        className="bg-slate-800 border border-slate-700 text-slate-100 placeholder-slate-400 sm:text-sm rounded-lg focus:ring-blue-600 focus:border-blue-600 block w-full p-2.5"
                                         required
                                     />
                                 </div>
                                 <button
                                     type="submit"
-                                    className="w-full text-black bg-gray-300 hover:bg-primary-dark focus:outline-none font-medium rounded-lg text-sm px-5 py-2.5 text-center">
+                                    className="w-full text-white bg-blue-600 hover:bg-blue-700 focus:outline-none font-medium rounded-lg text-sm px-5 py-2.5 text-center">
                                     Sign in
                                 </button>
                             </form>

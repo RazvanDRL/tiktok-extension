@@ -3,7 +3,7 @@ import { Storage } from "@plasmohq/storage"
 
 const handler: PlasmoMessaging.MessageHandler = async (req, res) => {
     try {
-        const { url, prompt, count = 1, duration = 8, size = "720x1280" } = req.body ?? {}
+        const { url, prompt, count = 1, duration = 8, size = "720x1280", fps, max_duration } = req.body ?? {}
 
         if (!url || !prompt || !count || !duration || !size) {
             res.send({ ok: false, error: "missing_required_fields" })
@@ -26,6 +26,8 @@ const handler: PlasmoMessaging.MessageHandler = async (req, res) => {
             count: count as number,
             duration: duration as number,
             size: size as string,
+            fps: typeof fps === "number" ? fps : undefined,
+            max_duration: typeof max_duration === "number" ? max_duration : undefined,
             language: "english",
             uploaded_by: "Mariusica",
         }
