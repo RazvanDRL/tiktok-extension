@@ -1,5 +1,6 @@
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { X } from "lucide-react"
+import { Storage } from "@plasmohq/storage"
 
 interface CopyDialogProps {
     isOpen: boolean
@@ -17,14 +18,38 @@ interface CopyDialogProps {
 const COUNT_OPTIONS = [1, 2, 3, 4, 5]
 const DURATION_OPTIONS = [4, 8, 12]
 const SIZE_OPTIONS = ["720x1280", "1280x720", "1024x1792", "1792x1024"]
+const DEFAULT_PROMPT = `you are the world's most intuitive visual communicator and expert prompt engineer. You possess a deep understanding of cinematic language, narrative structure, emotional resonance, the critical concept of filmic coverage and the specific capabilities of the sora 2 model. Your mission is to transform my conceptual ideas into meticulously crafted, narrative-style text-to-video prompts that are visually breathtaking and technically precise. create a json explaining this style in detailes, besides that ignore the text, {your_prompt} please make it: softer detail, more pixel noise, lower dynamic range, slightly compressed audio, harsher blown highlights`
 
 export const CopyDialog = ({ isOpen, onClose, onSubmit }: CopyDialogProps) => {
-    const [prompt, setPrompt] = useState("")
+    const [userPrompt, setUserPrompt] = useState("")
     const [count, setCount] = useState(1)
     const [duration, setDuration] = useState(8)
     const [size, setSize] = useState("720x1280")
     const [fps, setFps] = useState(3)
     const [maxDuration, setMaxDuration] = useState(3)
+    const [history, setHistory] = useState<string[]>([])
+    const storage = new Storage()
+
+    const HISTORY_KEY = "promptHistory"
+    const MAX_HISTORY = 20
+
+    useEffect(() => {
+        const loadHistory = async () => {
+            try {
+                const saved = (await storage.get(HISTORY_KEY)) as string[] | null
+                if (Array.isArray(saved)) {
+                    setHistory(saved)
+                } else {
+                    setHistory([])
+                }
+            } catch {
+                setHistory([])
+            }
+        }
+        if (isOpen) {
+            loadHistory()
+        }
+    }, [isOpen])
 
     if (!isOpen) return null
 
@@ -37,14 +62,51 @@ export const CopyDialog = ({ isOpen, onClose, onSubmit }: CopyDialogProps) => {
         // Do NOT call preventDefault so typing (including Space) still works
     }
 
-    const handleSubmit = (e: React.FormEvent) => {
-        e.preventDefault()
-        if (!prompt.trim()) {
-            alert("Please enter a prompt")
-            return
+    const savePromptToHistory = async (text: string) => {
+        const trimmed = text.trim()
+        if (!trimmed) return
+        try {
+            const current = (await storage.get(HISTORY_KEY)) as string[] | null
+            const next = [trimmed, ...(Array.isArray(current) ? current : [])]
+                .filter((item, idx, arr) => arr.indexOf(item) === idx)
+                .slice(0, MAX_HISTORY)
+            await storage.set(HISTORY_KEY, next)
+            setHistory(next)
+        } catch {
+            // ignore storage errors silently
         }
-        onSubmit({ prompt, count, duration, size, fps, max_duration: maxDuration })
-        setPrompt("")
+    }
+
+    const extractUserFromHistory = (value: string) => {
+        const trimmed = value.trim()
+        const placeholder = "{your_prompt}"
+        if (DEFAULT_PROMPT.includes(placeholder)) {
+            const [before, after] = DEFAULT_PROMPT.split(placeholder)
+            const startsWithBefore = trimmed.startsWith(before)
+            const endsWithAfter = trimmed.endsWith(after)
+            if (startsWithBefore && endsWithAfter) {
+                const middle = trimmed.slice(before.length, trimmed.length - after.length)
+                return middle.trimStart()
+            }
+        }
+        // Fallback for any legacy history that might have stored the full prompt with the default prefix
+        if (trimmed.startsWith(DEFAULT_PROMPT)) {
+            const remainder = trimmed.slice(DEFAULT_PROMPT.length)
+            return remainder.replace(/^\s*\n+/, "").trimStart()
+        }
+        return trimmed
+    }
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault()
+        const userText = userPrompt.trim()
+        const hasPlaceholder = DEFAULT_PROMPT.includes("{your_prompt}")
+        const finalPrompt = hasPlaceholder
+            ? DEFAULT_PROMPT.replace(/\{your_prompt\}/g, userText)
+            : `${DEFAULT_PROMPT}${userText ? `\n\n${userText}` : ""}`
+        await savePromptToHistory(userPrompt)
+        onSubmit({ prompt: finalPrompt, count, duration, size, fps, max_duration: maxDuration })
+        setUserPrompt("")
         onClose()
     }
 
@@ -62,22 +124,73 @@ export const CopyDialog = ({ isOpen, onClose, onSubmit }: CopyDialogProps) => {
 
                 <form onSubmit={handleSubmit} className="space-y-4">
                     <div>
-                        <label
-                            htmlFor="prompt"
-                            className="block mb-2 text-sm font-medium text-slate-200"
-                        >
-                            Prompt
-                        </label>
+                        <div className="mb-2 flex items-center justify-between">
+                            <label className="text-sm font-medium text-slate-200">Final prompt</label>
+                            <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-800 border border-slate-700 text-slate-300">read-only · inserts at {'{your_prompt}'}</span>
+                        </div>
+                        <div className="w-full p-3 text-xs leading-5 text-slate-300 bg-slate-800/70 border border-dashed border-slate-600 rounded-lg max-h-48 overflow-auto">
+                            <pre className="whitespace-pre-wrap font-mono">
+                                {DEFAULT_PROMPT.split("{your_prompt}").map((part, idx, arr) => (
+                                    <span key={`dp-${idx}`}>
+                                        {part}
+                                        {idx < arr.length - 1 && (
+                                            <span className={userPrompt ? "text-yellow-300" : "text-yellow-300 italic"}>
+                                                {userPrompt || "{your_prompt}"}
+                                            </span>
+                                        )}
+                                    </span>
+                                ))}
+                            </pre>
+                        </div>
+                    </div>
+
+                    <div>
+                        <div className="mb-2 flex items-center gap-2">
+                            <label
+                                htmlFor="user-prompt"
+                                className="block text-sm font-medium text-slate-200"
+                            >
+                                Your additions
+                            </label>
+                            {history.length > 0 && (
+                                <>
+                                    <label className="ml-auto text-xs text-slate-400">History</label>
+                                    <select
+                                        className="flex-1 p-2 text-xs bg-slate-800 border border-slate-700 rounded-md text-slate-200"
+                                        onChange={(e) => {
+                                            const value = e.target.value
+                                            if (value) setUserPrompt(extractUserFromHistory(value))
+                                        }}
+                                        value=""
+                                    >
+                                        <option value="" disabled>
+                                            Select previous input…
+                                        </option>
+                                        {history.map((h, i) => (
+                                            <option key={`${i}-${h.slice(0, 8)}`} value={h}>
+                                                {h.length > 80 ? `${h.slice(0, 80)}…` : h}
+                                            </option>
+                                        ))}
+                                    </select>
+                                    <button
+                                        type="button"
+                                        className="px-2 py-1 text-xs bg-slate-800 border border-slate-700 rounded-md text-slate-300 hover:bg-slate-700"
+                                        onClick={() => setUserPrompt(extractUserFromHistory(history[0] ?? ""))}
+                                    >
+                                        Restore last
+                                    </button>
+                                </>
+                            )}
+                        </div>
                         <textarea
-                            id="prompt"
-                            value={prompt}
-                            onChange={(e) => setPrompt(e.target.value)}
+                            id="user-prompt"
+                            value={userPrompt}
+                            onChange={(e) => setUserPrompt(e.target.value)}
                             onKeyDown={stopKeyPropagation}
                             onKeyUp={stopKeyPropagation}
                             className="w-full p-2.5 text-sm text-slate-100 bg-slate-800 border border-slate-700 rounded-lg focus:ring-blue-600 focus:border-blue-600 placeholder-slate-400"
-                            placeholder="Enter your prompt..."
-                            rows={12}
-                            required
+                            placeholder="Add your specific idea, scene details, subject, actions, style nuances…"
+                            rows={3}
                         />
                     </div>
 
