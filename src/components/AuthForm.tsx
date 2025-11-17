@@ -27,9 +27,9 @@ export default function AuthForm() {
     }
 
     return (
-        <div className="flex items-center justify-center w-full p-4 overflow-x-hidden rounded-xl overflow-y-auto md:inset-0 h-[calc(100%-1rem)] max-h-full">
+        <div className="flex items-center justify-center w-full overflow-x-hidden rounded-xl overflow-y-auto md:inset-0 h-[calc(100%-1rem)] max-h-full">
             <div className="w-full max-w-2xl max-h-full">
-                <div className="p-10 bg-slate-900 border border-slate-700 rounded-lg shadow text-slate-100">
+                <div className="bg-slate-900 rounded-lg text-slate-100">
                     <div className="flex flex-row items-center justify-center">
                         {!isLoading && (
                             <span className="text-slate-100 font-bold text-3xl text-center">
