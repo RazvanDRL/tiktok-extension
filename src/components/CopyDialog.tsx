@@ -101,12 +101,8 @@ export const CopyDialog = ({ isOpen, onClose, onSubmit }: CopyDialogProps) => {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
         const userText = userPrompt.trim()
-        const hasPlaceholder = DEFAULT_PROMPT.includes("{your_prompt}")
-        const finalPrompt = hasPlaceholder
-            ? DEFAULT_PROMPT.replace(/\{your_prompt\}/g, userText)
-            : `${DEFAULT_PROMPT}${userText ? `\n\n${userText}` : ""}`
         await savePromptToHistory(userPrompt)
-        onSubmit({ prompt: finalPrompt, count, duration, size, fps, max_duration: maxDuration })
+        onSubmit({ prompt: userText, count, duration, size, fps, max_duration: maxDuration })
         setUserPrompt("")
         onClose()
     }
