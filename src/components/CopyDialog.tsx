@@ -24,6 +24,15 @@ export const CopyDialog = ({ isOpen, onClose, onSubmit }: CopyDialogProps) => {
 
     if (!isOpen) return null
 
+    const stopKeyPropagation = (e: React.KeyboardEvent) => {
+        e.stopPropagation()
+        const nativeEvent = e.nativeEvent as any
+        if (nativeEvent?.stopImmediatePropagation) {
+            nativeEvent.stopImmediatePropagation()
+        }
+        // Do NOT call preventDefault so typing (including Space) still works
+    }
+
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault()
         if (!prompt.trim()) {
@@ -59,6 +68,8 @@ export const CopyDialog = ({ isOpen, onClose, onSubmit }: CopyDialogProps) => {
                             id="prompt"
                             value={prompt}
                             onChange={(e) => setPrompt(e.target.value)}
+                            onKeyDown={stopKeyPropagation}
+                            onKeyUp={stopKeyPropagation}
                             className="w-full p-2.5 text-sm text-gray-900 bg-gray-50 border border-gray-300 rounded-lg focus:ring-primary-600 focus:border-primary-600"
                             placeholder="Enter your prompt..."
                             rows={12}
