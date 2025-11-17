@@ -62,7 +62,19 @@ const handler: PlasmoMessaging.MessageHandler = async (req, res) => {
             return
         }
 
-        const downloadUrl = data.url;
+        const downloadUrl =
+            typeof data?.url === "string" && data.url.trim().length > 0
+                ? data.url
+                : null
+
+        if (!downloadUrl) {
+            res.send({
+                ok: false,
+                error: "missing_download_url_from_api",
+                details: `keys: ${Object.keys(data || {}).slice(0, 10).join(", ")}`
+            })
+            return
+        }
 
         try {
             const downloadId = await chrome.downloads.download({

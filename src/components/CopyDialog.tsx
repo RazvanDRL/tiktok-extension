@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react"
-import { X } from "lucide-react"
+import { Trash, X } from "lucide-react"
 import { Storage } from "@plasmohq/storage"
 
 interface CopyDialogProps {
@@ -28,6 +28,7 @@ export const CopyDialog = ({ isOpen, onClose, onSubmit }: CopyDialogProps) => {
     const [fps, setFps] = useState(3)
     const [maxDuration, setMaxDuration] = useState(3)
     const [history, setHistory] = useState<string[]>([])
+    const [isHistoryOpen, setIsHistoryOpen] = useState(false)
     const storage = new Storage()
 
     const HISTORY_KEY = "promptHistory"
@@ -110,6 +111,26 @@ export const CopyDialog = ({ isOpen, onClose, onSubmit }: CopyDialogProps) => {
         onClose()
     }
 
+    const clearHistory = async () => {
+        try {
+            await storage.set(HISTORY_KEY, [])
+            setHistory([])
+            setIsHistoryOpen(false)
+        } catch {
+            // ignore storage errors silently
+        }
+    }
+
+    const removeHistoryAt = async (index: number) => {
+        try {
+            const next = history.filter((_, i) => i !== index)
+            await storage.set(HISTORY_KEY, next)
+            setHistory(next)
+        } catch {
+            // ignore storage errors silently
+        }
+    }
+
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 font-sans">
             <div className="relative w-full max-w-2xl p-6 bg-slate-900 rounded-lg shadow-lg border border-slate-700">
@@ -153,33 +174,63 @@ export const CopyDialog = ({ isOpen, onClose, onSubmit }: CopyDialogProps) => {
                                 Your additions
                             </label>
                             {history.length > 0 && (
-                                <>
-                                    <label className="ml-auto text-xs text-slate-400">History</label>
-                                    <select
-                                        className="flex-1 p-2 text-xs bg-slate-800 border border-slate-700 rounded-md text-slate-200"
-                                        onChange={(e) => {
-                                            const value = e.target.value
-                                            if (value) setUserPrompt(extractUserFromHistory(value))
-                                        }}
-                                        value=""
-                                    >
-                                        <option value="" disabled>
-                                            Select previous input…
-                                        </option>
-                                        {history.map((h, i) => (
-                                            <option key={`${i}-${h.slice(0, 8)}`} value={h}>
-                                                {h.length > 80 ? `${h.slice(0, 80)}…` : h}
-                                            </option>
-                                        ))}
-                                    </select>
-                                    <button
-                                        type="button"
-                                        className="px-2 py-1 text-xs bg-slate-800 border border-slate-700 rounded-md text-slate-300 hover:bg-slate-700"
-                                        onClick={() => setUserPrompt(extractUserFromHistory(history[0] ?? ""))}
-                                    >
-                                        Restore last
-                                    </button>
-                                </>
+                                <div className="ml-auto relative">
+                                    <div className="flex items-center gap-2">
+                                        <button
+                                            type="button"
+                                            className="px-2 py-1 text-xs bg-slate-800 border border-slate-700 rounded-md text-slate-300 hover:bg-slate-700"
+                                            onClick={() => setUserPrompt(extractUserFromHistory(history[0] ?? ""))}
+                                            title="Insert your most recent addition"
+                                        >
+                                            Restore last
+                                        </button>
+                                        <button
+                                            type="button"
+                                            className="px-2 py-1 text-xs bg-slate-800 border border-slate-700 rounded-md text-slate-300 hover:bg-slate-700"
+                                            onClick={() => setIsHistoryOpen((v) => !v)}
+                                            aria-expanded={isHistoryOpen}
+                                            aria-haspopup="listbox"
+                                        >
+                                            Select previous…
+                                        </button>
+                                    </div>
+                                    {isHistoryOpen && (
+                                        <div
+                                            className="absolute right-0 mt-2 w-[28rem] max-w-[80vw] bg-slate-900 border border-slate-700 rounded-md shadow-xl overflow-hidden z-10"
+                                            role="listbox"
+                                            tabIndex={-1}
+                                        >
+                                            <div className="flex items-center justify-between px-3 py-2 bg-slate-800/60 border-b border-slate-700">
+                                                <span className="text-xs text-slate-300 pr-2">History</span>
+                                            </div>
+                                            <ul className="max-h-64 overflow-auto divide-y divide-slate-800">
+                                                {history.map((h, i) => (
+                                                    <li key={`${i}-${h.slice(0, 8)}`} className="group">
+                                                        <div className="flex items-start gap-2 px-3 py-2 hover:bg-slate-800 cursor-pointer" onClick={() => {
+                                                            setUserPrompt(extractUserFromHistory(h))
+                                                            setIsHistoryOpen(false)
+                                                        }}>
+                                                            <button
+                                                                type="button"
+                                                                className="flex-1 text-left text-xs text-slate-200 leading-5"
+                                                                title={h}
+                                                                onClick={() => {
+                                                                    setUserPrompt(extractUserFromHistory(h))
+                                                                    setIsHistoryOpen(false)
+                                                                }}
+                                                            >
+                                                                {h.length > 180 ? `${h.slice(0, 180)}…` : h}
+                                                            </button>
+                                                        </div>
+                                                    </li>
+                                                ))}
+                                                {history.length === 0 && (
+                                                    <li className="px-3 py-3 text-xs text-slate-400">No history yet</li>
+                                                )}
+                                            </ul>
+                                        </div>
+                                    )}
+                                </div>
                             )}
                         </div>
                         <textarea
