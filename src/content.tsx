@@ -3,10 +3,10 @@ import type { PlasmoCSConfig } from "plasmo"
 
 import { DownloadButton } from "~features/download-button"
 import { CopyButton } from "~features/copy-button"
-import { UrlDebug } from "~components/UrlDebug"
+// import { UrlDebug } from "~components/UrlDebug"
 
 export const config: PlasmoCSConfig = {
-  matches: ["<all_urls>"]
+  matches: ["https://*.tiktok.com/*"]
 }
 
 /**
