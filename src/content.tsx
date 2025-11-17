@@ -41,7 +41,7 @@ export const getStyle = (): HTMLStyleElement => {
 
 const PlasmoOverlay = () => {
   return (
-    <div className="z-50 flex fixed top-4 right-8 items-start">
+    <div className="z-50 flex fixed top-20 right-6 items-start">
       <CopyButton />
       <DownloadButton />
       {/* <UrlDebug /> */}
