@@ -2,7 +2,7 @@
   "name": "tiktok-extension",
   "displayName": "Tiktok extension",
   "version": "0.0.1",
-  "description": "alu pigus",
+  "description": "tiktok extension",
   "author": "stefan",
   "scripts": {
     "dev": "plasmo dev",
