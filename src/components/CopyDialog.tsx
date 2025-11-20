@@ -102,7 +102,8 @@ export const CopyDialog = ({ isOpen, onClose, onSubmit }: CopyDialogProps) => {
         e.preventDefault()
         const userText = userPrompt.trim()
         await savePromptToHistory(userPrompt)
-        onSubmit({ prompt: userText, count, duration, size, fps, max_duration: maxDuration })
+        const fullPrompt = DEFAULT_PROMPT.replace("{your_prompt}", userText)
+        onSubmit({ prompt: fullPrompt, count, duration, size, fps, max_duration: maxDuration })
         setUserPrompt("")
         onClose()
     }
