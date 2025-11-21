@@ -5,7 +5,12 @@ import { isTokenExpired, refreshAuthToken } from "../../utils/refreshAuthToken"
 
 const handler: PlasmoMessaging.MessageHandler = async (req, res) => {
     try {
-        const { url, prompt, count = 1, duration = 8, size = "720x1280", fps, max_duration } = req.body ?? {}
+        let { url } = req.body ?? {}
+        const { prompt, count = 1, duration = 8, size = "720x1280", fps, max_duration, featureId, adConfig } = req.body ?? {}
+
+        if (!url && req.sender?.tab?.url) {
+            url = req.sender.tab.url
+        }
 
         if (!url || !prompt || !count || !duration || !size) {
             res.send({ ok: false, error: "missing_required_fields" })
@@ -52,6 +57,8 @@ const handler: PlasmoMessaging.MessageHandler = async (req, res) => {
             size: size as string,
             fps: typeof fps === "number" ? fps : undefined,
             max_duration: typeof max_duration === "number" ? max_duration : undefined,
+            featureId: featureId as string | undefined,
+            adConfig: adConfig, // Pass the ad configuration if present
             language: "english",
             uploaded_by: "Mariusica",
         }
