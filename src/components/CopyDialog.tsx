@@ -308,7 +308,7 @@ export const CopyDialog = ({ isOpen, onClose, onSubmit }: CopyDialogProps) => {
                     <div className="flex flex-row gap-2">
                         <div>
                             <label className="block mb-2 text-sm font-medium text-slate-200">
-                                FPS: <span className="font-semibold">{fps}</span>
+                                SPS: <span className="font-semibold">{fps}</span>
                             </label>
                             <input
                                 type="range"
@@ -320,7 +320,7 @@ export const CopyDialog = ({ isOpen, onClose, onSubmit }: CopyDialogProps) => {
                                 className="w-full accent-blue-600"
                             />
                             <div className="mt-1 text-xs text-slate-400">
-                                1 to 7 frames per second
+                                1 to 7 screenshots per second
                             </div>
                         </div>
 
@@ -339,6 +339,12 @@ export const CopyDialog = ({ isOpen, onClose, onSubmit }: CopyDialogProps) => {
                             />
                             <div className="mt-1 text-xs text-slate-400">
                                 1 to 10 seconds maximum
+                            </div>
+                        </div>
+
+                        <div className="flex items-center justify-center">
+                            <div className="text-slate-200">
+                                = total screenshots: <span className="font-semibold">{maxDuration * fps}</span>
                             </div>
                         </div>
                     </div>
