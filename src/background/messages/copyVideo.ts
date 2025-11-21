@@ -1,6 +1,8 @@
 import type { PlasmoMessaging } from "@plasmohq/messaging"
 import { Storage } from "@plasmohq/storage"
 
+import { isTokenExpired, refreshAuthToken } from "../../utils/refreshAuthToken"
+
 const handler: PlasmoMessaging.MessageHandler = async (req, res) => {
     try {
         const { url, prompt, count = 1, duration = 8, size = "720x1280", fps, max_duration } = req.body ?? {}
@@ -11,12 +13,34 @@ const handler: PlasmoMessaging.MessageHandler = async (req, res) => {
         }
 
         const storage = new Storage()
-        const token = await storage.get("firebaseToken")
+        let token = await storage.get("firebaseToken")
         const uid = await storage.get("firebaseUid")
+        const refreshToken = await storage.get("firebaseRefreshToken")
 
         if (!token || !uid) {
             res.send({ ok: false, error: "user_not_found" })
             return
+        }
+
+        if (isTokenExpired(token)) {
+            if (refreshToken) {
+                console.log("Token expired, refreshing...")
+                const newTokens = await refreshAuthToken(refreshToken)
+                if (newTokens) {
+                    token = newTokens.id_token
+                    await storage.set("firebaseToken", newTokens.id_token)
+                    await storage.set("firebaseRefreshToken", newTokens.refresh_token)
+                    console.log("Token refreshed successfully")
+                } else {
+                    console.error("Failed to refresh token")
+                    res.send({ ok: false, error: "auth_expired_refresh_failed" })
+                    return
+                }
+            } else {
+                console.error("Token expired and no refresh token found")
+                res.send({ ok: false, error: "auth_expired_no_refresh_token" })
+                return
+            }
         }
 
         const requestBody = {
@@ -63,9 +87,8 @@ const handler: PlasmoMessaging.MessageHandler = async (req, res) => {
         }
     } catch (err: any) {
         console.error(err)
+        res.send({ ok: false, error: err.message })
     }
 }
 
 export default handler
-
-

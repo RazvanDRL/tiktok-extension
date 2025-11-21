@@ -7,6 +7,7 @@ const handler: PlasmoMessaging.MessageHandler = async (req, res) => {
 
         await storage.set("firebaseToken", null)
         await storage.set("firebaseUid", null)
+        await storage.set("firebaseRefreshToken", null)
 
         res.send({
             status: "success"

@@ -3,7 +3,7 @@ import { GoogleAuthProvider, getAuth } from "firebase/auth"
 import { getFirestore } from "firebase/firestore"
 import { getStorage } from "firebase/storage"
 
-const firebaseConfig = {
+export const firebaseConfig = {
     apiKey: "AIzaSyAjju5SrGHKrZBP1A05WIt6MClmehvf6xY",
     authDomain: "bc-ads-tester.firebaseapp.com",
     projectId: "bc-ads-tester",
