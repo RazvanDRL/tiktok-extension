@@ -85,6 +85,12 @@ const handler: PlasmoMessaging.MessageHandler = async (req, res) => {
             })
             return
         }
+
+        res.send({
+            ok: true,
+            data
+        })
+        return
     } catch (err: any) {
         console.error(err)
         res.send({ ok: false, error: err.message })

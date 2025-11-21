@@ -10,12 +10,17 @@ interface RefreshTokenResponse {
 
 export const refreshAuthToken = async (refreshToken: string): Promise<RefreshTokenResponse | null> => {
     try {
+        const body = new URLSearchParams({
+            grant_type: "refresh_token",
+            refresh_token: refreshToken
+        })
+
         const response = await fetch(`https://securetoken.googleapis.com/v1/token?key=${firebaseConfig.apiKey}`, {
             method: "POST",
             headers: {
                 "Content-Type": "application/x-www-form-urlencoded"
             },
-            body: `grant_type=refresh_token&refresh_token=${refreshToken}`
+            body: body.toString()
         })
 
         if (!response.ok) {
