@@ -1,15 +1,10 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import type { User } from "~models/user";
 import HookOverlayDialog from "./HookOverlayDialog";
 import BodyOverlayDialog from "./BodyOverlayDialog";
 import AudioSelectionDialog, { type AudioConfig } from "./AudioSelectionDialog";
-import { uploadVideoToHooks } from "./uploadVideoToHooks";
-import { createVideoMixFromAd } from "./createVideoMixFromAd";
-import Modal from "~components/Modal";
-import { toast } from "sonner";
-import MiniLoading from "~components/MiniLoading";
 
 export interface CreateAdFeature {
   id: string;
@@ -48,26 +43,18 @@ interface CreateAdFlowProps {
 }
 
 type FlowStep =
-  | "uploading"
   | "hook-overlay"
   | "body-overlay"
-  | "audio-selection"
-  | "creating-mix"
-  | "complete";
+  | "audio-selection";
 
 export default function CreateAdFlow({
-  videoUrl,
   videoLanguage,
-  resolution,
-  user,
   feature,
+  user,
   onComplete,
   onCancel,
-  aiVideoId,
-  mode = "create"
 }: CreateAdFlowProps) {
-  const [currentStep, setCurrentStep] = useState<FlowStep>(mode === "config" ? "hook-overlay" : "uploading");
-  const [hookDocId, setHookDocId] = useState<string>("");
+  const [currentStep, setCurrentStep] = useState<FlowStep>("hook-overlay");
   const [hookOverlayData, setHookOverlayData] = useState<{
     text: string;
     position: "top" | "center" | "bottom";
@@ -77,34 +64,6 @@ export default function CreateAdFlow({
     text: string;
     position: "top" | "center" | "bottom";
   } | null>(null);
-  const [audioConfig, setAudioConfig] = useState<AudioConfig | null>(null);
-
-  // Start uploading video to hooks when component mounts
-  useEffect(() => {
-    if (currentStep === "uploading" && mode === "create") {
-      handleUploadVideo();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  const handleUploadVideo = async () => {
-    try {
-      const docId = await uploadVideoToHooks(
-        videoUrl,
-        videoLanguage,
-        resolution,
-        user,
-        feature,
-        aiVideoId
-      );
-      setHookDocId(docId);
-      setCurrentStep("hook-overlay");
-    } catch (error) {
-      console.error("Error uploading video:", error);
-      toast.error("Failed to upload video to hooks");
-      onCancel();
-    }
-  };
 
   const handleHookOverlaySave = (
     text: string,
@@ -124,62 +83,21 @@ export default function CreateAdFlow({
   };
 
   const handleAudioSelectionSave = async (config: AudioConfig) => {
-    setAudioConfig(config);
+    const payload = {
+      hookOverlay: hookOverlayData!,
+      bodyOverlay: bodyOverlayData!,
+      audioConfig: config,
+      feature,
+      user,
+      videoLanguage,
+    };
 
-    if (mode === "config") {
-      onComplete({
-        hookOverlay: hookOverlayData!,
-        bodyOverlay: bodyOverlayData!,
-        audioConfig: config,
-        feature
-      });
-      return;
-    }
-
-    setCurrentStep("creating-mix");
-
-    try {
-      // Create the video mix with all collected data
-      await createVideoMixFromAd({
-        hookDocId,
-        hookOverlay: hookOverlayData!,
-        bodyOverlay: bodyOverlayData!,
-        audioConfig: config,
-        feature,
-        user,
-        videoLanguage,
-      });
-
-      toast.success("Video mix created successfully!");
-      setCurrentStep("complete");
-      onComplete();
-    } catch (error) {
-      console.error("Error creating video mix:", error);
-      toast.error("Failed to create video mix");
-      onCancel();
-    }
+    console.log("Sending ad config payload to generate-from-tiktok:", payload);
+    onComplete(payload);
   };
 
   return (
     <>
-      {currentStep === "uploading" && (
-        <Modal isOpen={true} onClose={onCancel}>
-          <div className='flex flex-col items-center gap-4 p-8'>
-            <MiniLoading />
-            <p className='text-lg font-medium'>Uploading video to hooks...</p>
-          </div>
-        </Modal>
-      )}
-
-      {currentStep === "creating-mix" && (
-        <Modal isOpen={true} onClose={() => { }}>
-          <div className='flex flex-col items-center gap-4 p-8'>
-            <MiniLoading />
-            <p className='text-lg font-medium'>Creating video mix...</p>
-          </div>
-        </Modal>
-      )}
-
       <HookOverlayDialog
         isOpen={currentStep === "hook-overlay"}
         onClose={onCancel}

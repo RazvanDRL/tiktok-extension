@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react";
 import Modal from "~components/Modal";
-import { Button } from "~components/ui/button";
 import { Label } from "~components/ui/label";
 import { Checkbox } from "~components/ui/checkbox";
 import { Input } from "~components/ui/input";
@@ -113,6 +112,14 @@ export default function AudioSelectionDialog({
     };
   };
 
+  const stopKeyPropagation = (event: React.KeyboardEvent) => {
+    event.stopPropagation();
+    const nativeEvent = event.nativeEvent as KeyboardEvent & {
+      stopImmediatePropagation?: () => void;
+    };
+    nativeEvent.stopImmediatePropagation?.();
+  };
+
   const handleSave = () => {
     const selected = audios.filter((audio) =>
       selectedAudios.has(audio._firestore_id!)
@@ -134,20 +141,32 @@ export default function AudioSelectionDialog({
       setAudioInstance(null);
       setPlayingAudio("");
     }
-    // Don't call onClose() here - let the parent handle closing by changing step
+    onClose();
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} className='max-w-2xl'>
-      <div className='flex flex-col gap-4 p-4'>
-        <h2 className='text-xl font-semibold'>Select Audio/Songs</h2>
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      className='w-full max-w-2xl'
+    >
+      <div
+        className='flex flex-col gap-5 bg-slate-900 text-slate-100 rounded-lg border border-slate-700 shadow-xl p-6'
+        style={{ backgroundColor: '#0f172a' }}
+      >
+        <div>
+          <h2 className='text-xl font-bold text-slate-100 mb-1'>Select Audio/Songs</h2>
+          <p className='text-sm text-slate-300'>
+            Choose background audio tracks and configure audio settings for your ad.
+          </p>
+        </div>
 
         {loading ? (
           <div className='flex justify-center py-8'>
             <MiniLoading />
           </div>
         ) : audios.length === 0 ? (
-          <div className='text-center py-8 text-muted-foreground'>
+          <div className='text-center py-8 text-slate-400'>
             No audios found for this language
           </div>
         ) : (
@@ -156,7 +175,7 @@ export default function AudioSelectionDialog({
               {audios.map((audio) => (
                 <div
                   key={audio._firestore_id}
-                  className='flex items-center gap-3 p-3 border rounded-md hover:bg-accent cursor-pointer'
+                  className='flex items-center gap-3 p-3 border border-slate-700 rounded-lg hover:bg-slate-800 cursor-pointer transition-colors'
                 >
                   <Checkbox
                     checked={selectedAudios.has(audio._firestore_id!)}
@@ -166,32 +185,32 @@ export default function AudioSelectionDialog({
                     className='flex-1'
                     onClick={() => toggleAudio(audio._firestore_id!)}
                   >
-                    <Label className='cursor-pointer'>{audio.name}</Label>
+                    <label className='cursor-pointer text-slate-200'>{audio.name}</label>
                   </div>
                   {audio.fileURL && (
-                    <Button
-                      variant='ghost'
-                      size='sm'
+                    <button
+                      type='button'
                       onClick={() => playAudio(audio.fileURL!)}
-                      className={
-                        playingAudio === audio.fileURL ? "text-primary-500" : ""
-                      }
+                      className={`p-2 text-slate-300 hover:text-slate-100 hover:bg-slate-800 rounded transition-colors ${playingAudio === audio.fileURL ? "text-blue-400" : ""
+                        }`}
                     >
                       <FontAwesomeIcon icon={faVolumeUp} className='w-4 h-4' />
-                    </Button>
+                    </button>
                   )}
                 </div>
               ))}
             </div>
 
             {/* Audio Configuration */}
-            <div className='border-t pt-4 mt-4 space-y-4'>
-              <h3 className='font-semibold text-sm'>Audio Configuration</h3>
+            <div className='border-t border-slate-700 pt-4 mt-4 space-y-4'>
+              <h3 className='font-semibold text-sm text-slate-200'>Audio Configuration</h3>
 
               <div className='grid grid-cols-2 gap-4'>
                 <div className='space-y-2'>
-                  <Label htmlFor='audio-volume'>Audio Volume (%)</Label>
-                  <Input
+                  <label htmlFor='audio-volume' className='block text-sm font-medium text-slate-200'>
+                    Audio Volume (%)
+                  </label>
+                  <input
                     id='audio-volume'
                     type='number'
                     value={audioVolume}
@@ -199,27 +218,37 @@ export default function AudioSelectionDialog({
                     min={0}
                     max={100}
                     placeholder='40'
+                    onKeyDown={stopKeyPropagation}
+                    onKeyUp={stopKeyPropagation}
+                    className='w-full p-3 text-sm text-slate-100 bg-slate-800 border border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600 placeholder-slate-400'
+                    style={{ backgroundColor: '#1e293b', color: '#f1f5f9', borderColor: '#334155' }}
                   />
                 </div>
 
                 <div className='space-y-2'>
-                  <Label htmlFor='audio-offset'>Audio Offset (seconds)</Label>
-                  <Input
+                  <label htmlFor='audio-offset' className='block text-sm font-medium text-slate-200'>
+                    Audio Offset (seconds)
+                  </label>
+                  <input
                     id='audio-offset'
                     type='number'
                     value={audioOffset}
                     onChange={(e) => setAudioOffset(Number(e.target.value))}
                     min={0}
                     placeholder='0'
+                    onKeyDown={stopKeyPropagation}
+                    onKeyUp={stopKeyPropagation}
+                    className='w-full p-3 text-sm text-slate-100 bg-slate-800 border border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600 placeholder-slate-400'
+                    style={{ backgroundColor: '#1e293b', color: '#f1f5f9', borderColor: '#334155' }}
                   />
                 </div>
               </div>
 
               <div className='space-y-2'>
-                <Label htmlFor='music-increase'>
+                <label htmlFor='music-increase' className='block text-sm font-medium text-slate-200'>
                   Music Increase Threshold (seconds, 0 to exclude)
-                </Label>
-                <Input
+                </label>
+                <input
                   id='music-increase'
                   type='number'
                   value={audioMusicIncreaseThreshold}
@@ -228,6 +257,10 @@ export default function AudioSelectionDialog({
                   }
                   min={0}
                   placeholder='0'
+                  onKeyDown={stopKeyPropagation}
+                  onKeyUp={stopKeyPropagation}
+                  className='w-full p-3 text-sm text-slate-100 bg-slate-800 border border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600 placeholder-slate-400'
+                  style={{ backgroundColor: '#1e293b', color: '#f1f5f9', borderColor: '#334155' }}
                 />
               </div>
 
@@ -240,9 +273,9 @@ export default function AudioSelectionDialog({
                       setHookKeepSound(checked as boolean)
                     }
                   />
-                  <Label htmlFor='hook-keep-sound' className='cursor-pointer'>
+                  <label htmlFor='hook-keep-sound' className='cursor-pointer text-slate-200'>
                     Keep hook video sound
-                  </Label>
+                  </label>
                 </div>
 
                 <div className='flex items-center gap-2'>
@@ -253,22 +286,33 @@ export default function AudioSelectionDialog({
                       setBodyKeepSound(checked as boolean)
                     }
                   />
-                  <Label htmlFor='body-keep-sound' className='cursor-pointer'>
+                  <label htmlFor='body-keep-sound' className='cursor-pointer text-slate-200'>
                     Keep body video sound
-                  </Label>
+                  </label>
                 </div>
               </div>
             </div>
           </>
         )}
 
-        <div className='flex gap-2 justify-end mt-4'>
-          <Button variant='outline' onClick={onClose}>
+        <div className='flex gap-3 justify-end pt-4'>
+          <button
+            type='button'
+            onClick={onClose}
+            className='px-4 py-2 text-sm font-medium text-slate-200 bg-slate-800 rounded-lg hover:bg-slate-700 border border-slate-700 transition-colors'
+            style={{ backgroundColor: '#1e293b', borderColor: '#334155' }}
+          >
             Cancel
-          </Button>
-          <Button onClick={handleSave} disabled={selectedAudios.size === 0}>
+          </button>
+          <button
+            type='button'
+            onClick={handleSave}
+            disabled={selectedAudios.size === 0}
+            className='px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors'
+            style={{ backgroundColor: '#2563eb' }}
+          >
             Save ({selectedAudios.size} selected)
-          </Button>
+          </button>
         </div>
       </div>
     </Modal>

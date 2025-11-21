@@ -57,10 +57,13 @@ const handler: PlasmoMessaging.MessageHandler = async (req, res) => {
             size: size as string,
             fps: typeof fps === "number" ? fps : undefined,
             max_duration: typeof max_duration === "number" ? max_duration : undefined,
-            featureId: featureId as string | undefined,
-            adConfig: adConfig, // Pass the ad configuration if present
+            payload: adConfig,
             language: "english",
             uploaded_by: "Mariusica",
+        }
+
+        if (adConfig) {
+            console.log("Sending request to generate-from-tiktok with adConfig:", JSON.stringify(adConfig, null, 2))
         }
 
         const response = await fetch("https://adloops.ai/api/ai-videos/generate-from-tiktok", {

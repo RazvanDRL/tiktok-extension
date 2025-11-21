@@ -50,7 +50,8 @@ const Modal = ({ isOpen, children, onClose, className }: IModalProps) => {
                         }}
                         transition={{ duration: 0.5, ease: "easeInOut" }}
                         onClick={(e) => e.stopPropagation()}
-                        className={`bg-sidebar p-4 rounded-lg bg-white dark:bg-dark-200 shadow-lg gap-2 text-xs relative max-w-3/4 max-h-full overflow-y-auto ${className}`}
+                        className={`shadow-lg relative max-w-3/4 max-h-full overflow-y-auto ${className || ''}`}
+                        style={{ backgroundColor: 'transparent' }}
                     >
                         {children}
                     </motion.div>
