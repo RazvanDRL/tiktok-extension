@@ -105,21 +105,27 @@ export default function HookOverlayDialog({
 
         <div className='space-y-2'>
           <label htmlFor='hook-time-limit' className='block text-sm font-medium text-slate-200'>
-            Hook Time Limit (seconds)
+            Hook Time Limit: {hookTimeLimit} seconds
           </label>
           <input
             id='hook-time-limit'
-            type='number'
+            type='range'
             value={hookTimeLimit}
             onChange={(e) => setHookTimeLimit(Number(e.target.value))}
-            placeholder='3'
             min={1}
             max={10}
+            step={1}
             onKeyDown={stopKeyPropagation}
             onKeyUp={stopKeyPropagation}
-            className='w-full p-3 text-sm text-slate-100 bg-slate-800 border border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600 placeholder-slate-400'
-            style={{ backgroundColor: '#1e293b', color: '#f1f5f9', borderColor: '#334155' }}
+            className='w-full h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer slider'
+            style={{
+              background: `linear-gradient(to right, #2563eb 0%, #2563eb ${((hookTimeLimit - 1) / 9) * 100}%, #334155 ${((hookTimeLimit - 1) / 9) * 100}%, #334155 100%)`
+            }}
           />
+          <div className='flex justify-between text-xs text-slate-400'>
+            <span>1s</span>
+            <span>10s</span>
+          </div>
         </div>
 
         <div className='flex gap-3 justify-end pt-4'>
