@@ -1,15 +1,24 @@
-import React from "react"
+import React, { useState, useEffect } from "react"
 import { Button } from "~components/ui/button"
+import useFirebaseUser from "~firebase/useFirebaseUser"
+import { sendToBackground } from "@plasmohq/messaging"
+import type { ExtensionSavedAds } from "~models/extension-saved-ads"
 
 interface AdLibrarySaveButtonProps {
     adCard: HTMLElement
 }
 
 export const AdLibrarySaveButton = ({ adCard }: AdLibrarySaveButtonProps) => {
-    const extractAdInfo = (element: HTMLElement) => {
+    const { user, manualUser } = useFirebaseUser()
+    const [isLoading, setIsLoading] = useState(false)
+
+    const activeUser = user || manualUser
+
+    const extractAdInfo = (element: HTMLElement): ExtensionSavedAds | null => {
         const text = element.innerText
 
         const libraryIdMatch = text.match(/Library ID: (\d+)/)
+        if (!libraryIdMatch) return null
 
         let adBody = null
         const bodyMatch = text.match(/Sponsored\s+(.*)/s)
@@ -55,29 +64,62 @@ export const AdLibrarySaveButton = ({ adCard }: AdLibrarySaveButtonProps) => {
         })
 
         return {
-            libraryId: libraryIdMatch ? libraryIdMatch[1] : null,
+            libraryId: libraryIdMatch[1],
             adBody: adBody,
-            mediaUrl: mediaUrl,
-            mediaType: mediaType,
-            mediaPoster: mediaPoster,
+            mediaUrl: mediaUrl || null,
+            mediaType: mediaType || null,
+            mediaPoster: mediaPoster || null,
         }
     }
 
-    const handleSave = (e: React.MouseEvent) => {
+    const handleSave = async (e: React.MouseEvent) => {
         e.preventDefault()
         e.stopPropagation()
 
-        const adInfo = extractAdInfo(adCard)
-        console.log("Ad Info Extracted:", adInfo)
+        if (!activeUser) {
+            alert("Please login to the extension first")
+            return
+        }
+
+        setIsLoading(true)
+        try {
+            const adInfo = extractAdInfo(adCard)
+            if (!adInfo) {
+                throw new Error("Could not extract ad info")
+            }
+
+            console.log("Ad Info Extracted:", adInfo)
+
+            // Send to background script to handle saving (and auth/storage access)
+            const response = await sendToBackground({
+                name: "saveAd",
+                body: {
+                    ad: adInfo,
+                    userId: activeUser.uid
+                }
+            })
+
+            if (response.status === "error") {
+                throw new Error(response.error)
+            }
+
+            alert("Ad saved successfully!")
+        } catch (error) {
+            console.error("Error saving ad:", error)
+            alert("Failed to save ad: " + (error as Error).message)
+        } finally {
+            setIsLoading(false)
+        }
     }
 
     return (
         <div className="w-full p-2 mt-2 border-t border-gray-200">
             <Button
                 onClick={handleSave}
+                disabled={isLoading}
                 className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
             >
-                Save
+                {isLoading ? "Saving..." : "Save"}
             </Button>
         </div>
     )
