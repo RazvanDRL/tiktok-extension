@@ -1,7 +1,10 @@
 import type { PlasmoMessaging } from "@plasmohq/messaging"
 import { Storage } from "@plasmohq/storage"
+import { doc, getDoc } from "firebase/firestore"
 
 import { isTokenExpired, refreshAuthToken } from "../../utils/refreshAuthToken"
+import { db } from "~firebase/firebaseClient"
+import type { User as UserType } from "~models/user"
 
 const handler: PlasmoMessaging.MessageHandler = async (req, res) => {
     try {
@@ -48,6 +51,17 @@ const handler: PlasmoMessaging.MessageHandler = async (req, res) => {
             }
         }
 
+        // Fetch user data from Firestore
+        let manualUser: UserType | null = null
+        try {
+            const userDoc = await getDoc(doc(db, "users", uid as string))
+            if (userDoc.exists()) {
+                manualUser = { ...userDoc.data(), uid: uid as string } as UserType
+            }
+        } catch (error) {
+            console.error("Error fetching user data:", error)
+        }
+
         const requestBody: any = {
             url: url as string,
             userId: uid as string,
@@ -55,7 +69,7 @@ const handler: PlasmoMessaging.MessageHandler = async (req, res) => {
             count: count as number,
             duration: duration as number,
             size: size as string,
-            uploaded_by: "[Testing]",
+            uploaded_by: manualUser?.name || "[extension]",
             language: "english",
         }
 

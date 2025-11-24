@@ -1,9 +1,6 @@
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { Copy } from "lucide-react"
 import { sendToBackground } from "@plasmohq/messaging"
-import { Storage } from "@plasmohq/storage"
-import { doc, getDoc } from "firebase/firestore"
-import { db } from "~firebase/firebaseClient"
 import { CopyDialog } from "~components/CopyDialog"
 import CreateAdFlow, { type CreateAdFeature, CREATE_AD_FEATURES } from "~CreateAdModals/CreateAdFlow"
 import useFirebaseUser from "~firebase/useFirebaseUser"
@@ -22,35 +19,7 @@ export const CopyButton = () => {
     initialData?: any;
   }>({ active: false, feature: null, videoLanguage: "english", resolution: "portrait" })
 
-  const [manualUser, setManualUser] = useState<User | null>(null)
-  const [isFetchingUser, setIsFetchingUser] = useState(true)
-
-  const { user: firebaseUser } = useFirebaseUser()
-
-  useEffect(() => {
-    const fetchUser = async () => {
-      // If we already have a firebase user from the hook, we might still want to fetch the full profile
-      // but for now let's rely on storage fallback if hook fails
-      const storage = new Storage()
-      const uid = await storage.get("firebaseUid")
-
-      if (uid) {
-        try {
-          const userDoc = await getDoc(doc(db, "users", uid))
-          if (userDoc.exists()) {
-            const userData = userDoc.data() as User
-            // Ensure uid is present
-            setManualUser({ ...userData, uid: uid })
-          }
-        } catch (error) {
-          console.error("Error fetching user:", error)
-        }
-      }
-      setIsFetchingUser(false)
-    }
-
-    fetchUser()
-  }, [])
+  const { user: firebaseUser, manualUser } = useFirebaseUser()
 
   // Convert Firebase User to App User model, or use manualUser
   const user: User | undefined = firebaseUser ? {
