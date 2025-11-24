@@ -31,14 +31,12 @@ export const CREATE_AD_FEATURES: CreateAdFeature[] = [
 
 
 interface CreateAdFlowProps {
-  videoUrl: string;
   videoLanguage: string;
   resolution: "portrait" | "landscape";
   user: User;
   feature: CreateAdFeature;
   onComplete: (data?: any) => void;
   onCancel: () => void;
-  aiVideoId?: string;
   mode?: "create" | "config";
 }
 

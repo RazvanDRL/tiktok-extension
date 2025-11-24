@@ -6,7 +6,7 @@ import { isTokenExpired, refreshAuthToken } from "../../utils/refreshAuthToken"
 const handler: PlasmoMessaging.MessageHandler = async (req, res) => {
     try {
         let { url } = req.body ?? {}
-        const { prompt, count = 1, duration = 8, size = "720x1280", fps, max_duration, featureId, adConfig } = req.body ?? {}
+        const { prompt, count = 1, duration = 8, size = "720x1280", fps, max_duration, adConfig } = req.body ?? {}
 
         if (!url && req.sender?.tab?.url) {
             url = req.sender.tab.url
@@ -48,22 +48,38 @@ const handler: PlasmoMessaging.MessageHandler = async (req, res) => {
             }
         }
 
-        const requestBody = {
+        const requestBody: any = {
             url: url as string,
             userId: uid as string,
             prompt: prompt as string,
             count: count as number,
             duration: duration as number,
             size: size as string,
-            fps: typeof fps === "number" ? fps : undefined,
-            max_duration: typeof max_duration === "number" ? max_duration : undefined,
-            payload: adConfig,
+            uploaded_by: "[Testing]",
             language: "english",
-            uploaded_by: "Mariusica",
         }
 
+        // Add optional fields only if they are provided
+        if (typeof fps === "number") {
+            requestBody.fps = fps
+        }
+
+        if (typeof max_duration === "number") {
+            requestBody.max_duration = max_duration
+        }
+
+        // Only include payload if adConfig is provided and valid
         if (adConfig) {
-            console.log("Sending request to generate-from-tiktok with adConfig:", JSON.stringify(adConfig, null, 2))
+            requestBody.payload = adConfig
+        }
+
+        console.log("Sending request to generate-from-tiktok API:")
+        console.log("- URL:", url)
+        console.log("- Prompt:", prompt)
+        console.log("- Count:", count, "Duration:", duration, "Size:", size)
+        console.log("- FPS:", fps, "Max Duration:", max_duration)
+        if (adConfig) {
+            console.log("- Ad Config:", JSON.stringify(adConfig, null, 2))
         }
 
         const response = await fetch("https://adloops.ai/api/ai-videos/generate-from-tiktok", {

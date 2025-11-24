@@ -12,15 +12,15 @@ import { getCurrentUrl } from "~utils/getCurrentUrl"
 
 export const CopyButton = () => {
   const [isDialogOpen, setIsDialogOpen] = useState(false)
+  const [isGenerating, setIsGenerating] = useState(false)
   const [createAdFlow, setCreateAdFlow] = useState<{
     active: boolean;
     feature: CreateAdFeature | null;
-    videoUrl: string;
     videoLanguage: string;
     resolution: "portrait" | "landscape";
     aiVideoId?: string;
     initialData?: any;
-  }>({ active: false, feature: null, videoUrl: "", videoLanguage: "english", resolution: "portrait" })
+  }>({ active: false, feature: null, videoLanguage: "english", resolution: "portrait" })
 
   const [manualUser, setManualUser] = useState<User | null>(null)
   const [isFetchingUser, setIsFetchingUser] = useState(true)
@@ -75,18 +75,23 @@ export const CopyButton = () => {
     max_duration: number
     featureId?: string
   }) => {
-    // If a feature is selected, we go through the Ad Flow FIRST to gather configuration
+    const url = getCurrentUrl() as string;
+
+    if (!url) {
+      alert("❌ Error: No URL found: " + url)
+      return
+    }
+
     if (data.featureId) {
       const selectedFeature = CREATE_AD_FEATURES.find(f => f.id === data.featureId)
       if (selectedFeature) {
         // Determine resolution based on size
-        const resolution = data.size === "720x1280" || data.size === "1024x1792" ? "portrait" : "landscape"
-        const url = getCurrentUrl() || ""
+        const size = data.size.split("x") as [string, string];
+        const resolution = parseInt(size[0]) > parseInt(size[1]) ? "landscape" : "portrait";
 
         setCreateAdFlow({
           active: true,
           feature: selectedFeature,
-          videoUrl: url, // Use current TikTok URL for preview purposes if needed (though mode="config" skips upload)
           videoLanguage: "english",
           resolution: resolution,
           initialData: data // Store original form data
@@ -96,23 +101,33 @@ export const CopyButton = () => {
     }
 
     // If no feature selected, proceed with immediate generation
-    const result = await sendToBackground({
-      name: "copyVideo" as never,
-      body: {
-        prompt: data.prompt,
-        count: data.count,
-        duration: data.duration,
-        size: data.size,
-        fps: data.fps,
-        max_duration: data.max_duration,
-        featureId: data.featureId
-      }
-    })
+    setIsGenerating(true)
+    try {
+      const result = await sendToBackground({
+        name: "copyVideo" as never,
+        body: {
+          url: url,
+          prompt: data.prompt,
+          count: data.count,
+          duration: data.duration,
+          size: data.size,
+          fps: data.fps,
+          max_duration: data.max_duration,
+        }
+      })
 
-    if (result.ok) {
-      console.log("Download started:", result.downloadId)
-    } else {
-      alert(result.error || "Failed to generate video")
+      if (result.ok) {
+        console.log("Video generation started successfully:", result.data)
+        setIsDialogOpen(false)
+      } else {
+        console.error("Video generation failed:", result.error)
+        alert(`❌ Failed to generate video: ${result.error || "Unknown error"}`)
+      }
+    } catch (error) {
+      console.error("Error in handleGenerate:", error)
+      alert(`❌ Error: ${error instanceof Error ? error.message : "Unknown error"}`)
+    } finally {
+      setIsGenerating(false)
     }
   }
 
@@ -120,25 +135,43 @@ export const CopyButton = () => {
     // If we have adConfig, it means we came from the configuration flow
     // Now we trigger the background generation with the combined data
     if (createAdFlow.initialData && adConfig) {
-      const data = createAdFlow.initialData
-      const result = await sendToBackground({
-        name: "copyVideo" as never,
-        body: {
-          prompt: data.prompt,
-          count: data.count,
-          duration: data.duration,
-          size: data.size,
-          fps: data.fps,
-          max_duration: data.max_duration,
-          featureId: data.featureId,
-          adConfig: adConfig // Pass the gathered ad config
-        }
-      })
+      setIsGenerating(true)
 
-      if (result.ok) {
-        console.log("Download started with ad config:", result.downloadId)
-      } else {
-        alert(result.error || "Failed to generate video")
+      const url = getCurrentUrl() as string;
+      if (!url) {
+        alert("❌ Error: No URL found: " + url)
+        return
+      }
+      try {
+        const data = createAdFlow.initialData
+        console.log("Sending generation request with ad configuration...")
+
+        const result = await sendToBackground({
+          name: "copyVideo" as never,
+          body: {
+            url: url,
+            prompt: data.prompt,
+            count: data.count,
+            duration: data.duration,
+            size: data.size,
+            fps: data.fps,
+            max_duration: data.max_duration,
+            adConfig: adConfig // Pass the gathered ad config
+          }
+        })
+
+        if (result.ok) {
+          console.log("Ad video generation started successfully:", result.data)
+          setIsDialogOpen(false)
+        } else {
+          console.error("Ad video generation failed:", result.error)
+          alert(`❌ Failed to generate ad video: ${result.error || "Unknown error"}`)
+        }
+      } catch (error) {
+        console.error("Error in handleCreateAdComplete:", error)
+        alert(`❌ Error: ${error instanceof Error ? error.message : "Unknown error"}`)
+      } finally {
+        setIsGenerating(false)
       }
     }
 
@@ -160,19 +193,17 @@ export const CopyButton = () => {
       </button>
       <CopyDialog
         isOpen={isDialogOpen}
-        onClose={() => setIsDialogOpen(false)}
+        onClose={() => !isGenerating && setIsDialogOpen(false)}
         onSubmit={handleGenerate}
       />
       {createAdFlow.active && createAdFlow.feature && user && (
         <CreateAdFlow
-          videoUrl={createAdFlow.videoUrl}
           videoLanguage={createAdFlow.videoLanguage}
           resolution={createAdFlow.resolution}
           user={user}
           feature={createAdFlow.feature}
           onComplete={handleCreateAdComplete}
           onCancel={handleCreateAdCancel}
-          aiVideoId={createAdFlow.aiVideoId}
           mode="config" // Use config mode to skip upload/mix creation
         />
       )}
