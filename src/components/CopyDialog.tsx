@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react"
 import { Trash, X } from "lucide-react"
 import { Storage } from "@plasmohq/storage"
+import { CREATE_AD_FEATURES } from "~CreateAdModals/CreateAdFlow"
 
 interface CopyDialogProps {
     isOpen: boolean
@@ -12,6 +13,7 @@ interface CopyDialogProps {
         size: string
         fps: number
         max_duration: number
+        featureId?: string
     }) => void
 }
 
@@ -27,6 +29,7 @@ export const CopyDialog = ({ isOpen, onClose, onSubmit }: CopyDialogProps) => {
     const [size, setSize] = useState("720x1280")
     const [fps, setFps] = useState(3)
     const [maxDuration, setMaxDuration] = useState(3)
+    const [featureId, setFeatureId] = useState<string>("")
     const [history, setHistory] = useState<string[]>([])
     const [isHistoryOpen, setIsHistoryOpen] = useState(false)
     const storage = new Storage()
@@ -103,8 +106,17 @@ export const CopyDialog = ({ isOpen, onClose, onSubmit }: CopyDialogProps) => {
         const userText = userPrompt.trim()
         await savePromptToHistory(userPrompt)
         const fullPrompt = DEFAULT_PROMPT.replace("{your_prompt}", userText)
-        onSubmit({ prompt: fullPrompt, count, duration, size, fps, max_duration: maxDuration })
+        onSubmit({
+            prompt: fullPrompt,
+            count,
+            duration,
+            size,
+            fps,
+            max_duration: maxDuration,
+            featureId: featureId || undefined
+        })
         setUserPrompt("")
+        setFeatureId("")
         onClose()
     }
 
@@ -346,6 +358,37 @@ export const CopyDialog = ({ isOpen, onClose, onSubmit }: CopyDialogProps) => {
                             <div className="text-slate-200">
                                 = total screenshots: <span className="font-semibold">{maxDuration * fps}</span>
                             </div>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label className="block mb-2 text-sm font-medium text-slate-200">
+                            Ad Feature (Optional)
+                        </label>
+                        <div className="flex flex-wrap gap-2">
+                            <button
+                                type="button"
+                                onClick={() => setFeatureId("")}
+                                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${featureId === ""
+                                    ? "bg-blue-600 text-white"
+                                    : "bg-slate-800 text-slate-200 hover:bg-slate-700"
+                                    }`}
+                            >
+                                None
+                            </button>
+                            {CREATE_AD_FEATURES.map((feature) => (
+                                <button
+                                    key={feature.id}
+                                    type="button"
+                                    onClick={() => setFeatureId(feature.id)}
+                                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${featureId === feature.id
+                                        ? "bg-blue-600 text-white"
+                                        : "bg-slate-800 text-slate-200 hover:bg-slate-700"
+                                        }`}
+                                >
+                                    {feature.name}
+                                </button>
+                            ))}
                         </div>
                     </div>
 

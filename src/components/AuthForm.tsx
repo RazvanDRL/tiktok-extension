@@ -1,6 +1,8 @@
 import { signInWithEmailAndPassword } from "firebase/auth"
 import { useState } from "react"
 
+import { Button } from "~components/ui/button"
+import { Input } from "~components/ui/input"
 import { auth } from "~firebase/firebaseClient"
 import useFirebaseUser from "~firebase/useFirebaseUser"
 
@@ -52,7 +54,7 @@ export default function AuthForm() {
                                         className="block mb-2 text-sm font-medium text-slate-200">
                                         Your email
                                     </label>
-                                    <input
+                                    <Input
                                         type="email"
                                         name="email"
                                         id="email"
@@ -69,7 +71,7 @@ export default function AuthForm() {
                                         className="block mb-2 text-sm font-medium text-slate-200">
                                         Password
                                     </label>
-                                    <input
+                                    <Input
                                         type="password"
                                         name="password"
                                         id="password"
@@ -80,11 +82,11 @@ export default function AuthForm() {
                                         required
                                     />
                                 </div>
-                                <button
+                                <Button
                                     type="submit"
-                                    className="w-full text-white bg-blue-600 hover:bg-blue-700 focus:outline-none font-medium rounded-lg text-sm px-5 py-2.5 text-center">
+                                    className="w-full text-white bg-blue-600 hover:bg-blue-700 rounded-lg">
                                     Sign in
-                                </button>
+                                </Button>
                             </form>
                         )}
                     </div>
