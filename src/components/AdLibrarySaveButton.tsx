@@ -102,8 +102,6 @@ export const AdLibrarySaveButton = ({ adCard }: AdLibrarySaveButtonProps) => {
             if (response.status === "error") {
                 throw new Error(response.error)
             }
-
-            alert("Ad saved successfully!")
         } catch (error) {
             console.error("Error saving ad:", error)
             alert("Failed to save ad: " + (error as Error).message)
