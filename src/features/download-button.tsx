@@ -26,7 +26,7 @@ export const DownloadButton = () => {
   }
 
   return (
-    <button type="button" className="ml-3 flex items-center justify-center w-12 h-12 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-slate-100 border border-slate-700"
+    <button type="button" className="flex items-center justify-center w-12 h-12 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-slate-100 border border-slate-700"
       onClick={async () => await downloadVideo()}
     >
       <Download className="w-6 h-6" />

@@ -6,6 +6,7 @@ import { Storage } from "@plasmohq/storage"
 import { DownloadButton } from "~features/download-button"
 import { CopyButton } from "~features/copy-button"
 // import { UrlDebug } from "~components/UrlDebug"
+import PlusButton from "~features/plus-button"
 
 export const config: PlasmoCSConfig = {
   matches: ["https://*.tiktok.com/*"],
@@ -14,6 +15,7 @@ export const config: PlasmoCSConfig = {
 
 const storage = new Storage()
 const HIDE_BUTTONS_KEY = "hideContentButtons"
+const ENABLE_PLUS_BUTTON_KEY = "enablePlusButton"
 
 /**
  * Generates a style element with adjusted CSS to work correctly within a Shadow DOM.
@@ -47,12 +49,17 @@ export const getStyle = (): HTMLStyleElement => {
 
 const PlasmoOverlay = () => {
   const [hideButtons, setHideButtons] = useState(true) // Start hidden to prevent flash
+  const [plusButtonEnabled, setPlusButtonEnabled] = useState(false)
   const [isLoaded, setIsLoaded] = useState(false)
 
   useEffect(() => {
     // Initial load
-    storage.get<boolean>(HIDE_BUTTONS_KEY).then((value) => {
-      setHideButtons(value ?? false)
+    Promise.all([
+      storage.get<boolean>(HIDE_BUTTONS_KEY),
+      storage.get<boolean>(ENABLE_PLUS_BUTTON_KEY)
+    ]).then(([hideValue, plusValue]) => {
+      setHideButtons(hideValue ?? false)
+      setPlusButtonEnabled(plusValue ?? false)
       setIsLoaded(true)
     })
 
@@ -60,18 +67,26 @@ const PlasmoOverlay = () => {
     storage.watch({
       [HIDE_BUTTONS_KEY]: (change) => {
         setHideButtons(change.newValue ?? false)
+      },
+      [ENABLE_PLUS_BUTTON_KEY]: (change) => {
+        setPlusButtonEnabled(change.newValue ?? false)
       }
     })
   }, [])
 
-  if (!isLoaded || hideButtons) {
+  if (!isLoaded || (hideButtons && !plusButtonEnabled)) {
     return null
   }
 
   return (
-    <div className="z-50 flex fixed top-20 right-6 items-start">
-      <CopyButton />
-      <DownloadButton />
+    <div className="z-50 flex fixed top-20 right-6 items-start gap-2">
+      {plusButtonEnabled && window.location.pathname.startsWith("/@") && window.location.pathname.includes("/video/") && <PlusButton />}
+      {!hideButtons && (
+        <>
+          <CopyButton />
+          <DownloadButton />
+        </>
+      )}
       {/* <UrlDebug /> */}
     </div>
   )

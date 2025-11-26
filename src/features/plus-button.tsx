@@ -2,7 +2,14 @@ import { sendToBackground } from "@plasmohq/messaging"
 import { Check, Loader2, Plus } from "lucide-react"
 import { useState } from "react"
 
-const PlusButton = ({ container, variant = "default" }: { container?: HTMLElement, variant?: "default" | "profile" }) => {
+type PlusButtonVariant = "default" | "profile"
+
+const variantWrapperClass: Record<PlusButtonVariant, string> = {
+    default: "flex flex-col items-center justify-center mb-4",
+    profile: "flex flex-col items-center justify-center ml-2"
+}
+
+const PlusButton = ({ container, variant = "default" }: { container?: HTMLElement, variant?: PlusButtonVariant }) => {
     const [isLoading, setIsLoading] = useState(false)
     const [isSuccess, setIsSuccess] = useState(false)
 
@@ -65,7 +72,7 @@ const PlusButton = ({ container, variant = "default" }: { container?: HTMLElemen
     }
 
     return (
-        <div className={`flex flex-col items-center justify-center ${variant === "default" ? "mb-4" : "ml-2"}`}>
+        <div className={variantWrapperClass[variant]}>
             <button
                 onClick={handleClick}
                 disabled={isLoading || isSuccess}
