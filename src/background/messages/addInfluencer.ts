@@ -44,7 +44,7 @@ const handler: PlasmoMessaging.MessageHandler = async (req, res) => {
 
         console.log("Sending request to add-influencer API:", authorLink)
 
-        const response = await fetch("https://c7cbaf2e80c1.ngrok-free.app/api/add-influencer", {
+        const response = await fetch("https://adloops.ai/api/add-influencer", {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",

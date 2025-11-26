@@ -47,7 +47,7 @@
   },
   "manifest": {
     "host_permissions": [
-      "https://tiktok.com/*",
+      "https://*.tiktok.com/*",
       "http://49.13.217.93:9000/*",
       "https://adloops.ai/*",
       "https://storage.googleapis.com/*"

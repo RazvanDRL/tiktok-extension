@@ -1,13 +1,17 @@
 import cssText from "data-text:~style.css"
 import type { PlasmoCSConfig } from "plasmo"
 import { createRoot } from "react-dom/client"
+import { Storage } from "@plasmohq/storage"
 import PlusButton from "~features/plus-button"
 
 export const config: PlasmoCSConfig = {
-    matches: ["https://*.tiktok.com/*"]
+    matches: ["https://*.tiktok.com/*"],
+    exclude_matches: ["https://ads.tiktok.com/*"]
 }
 
 const INJECTED_CLASS = "plasmo-plus-button-injected"
+const storage = new Storage()
+const HIDE_BUTTONS_KEY = "hideContentButtons"
 
 const getStyle = (): HTMLStyleElement => {
     const baseFontSize = 16
@@ -26,7 +30,18 @@ const getStyle = (): HTMLStyleElement => {
     return styleElement
 }
 
-const injectButtons = () => {
+// Track all injected containers so we can show/hide them
+const injectedContainers: HTMLElement[] = []
+
+const updateVisibility = (hidden: boolean) => {
+    injectedContainers.forEach((container) => {
+        container.style.display = hidden ? "none" : ""
+    })
+}
+
+const injectButtons = async () => {
+    const hideButtons = await storage.get<boolean>(HIDE_BUTTONS_KEY)
+
     const actionBars = document.querySelectorAll('section[class*="SectionActionBarContainer"]')
     const profileButtonPanels = document.querySelectorAll('div[class*="DivButtonPanelWrapper"]')
 
@@ -39,6 +54,10 @@ const injectButtons = () => {
 
         // Create a container for our shadow host
         const container = document.createElement("div")
+        if (hideButtons) {
+            container.style.display = "none"
+        }
+        injectedContainers.push(container)
 
         // Insert at the beginning of the action bar (top of the buttons)
         target.insertAdjacentElement("afterbegin", container)
@@ -65,6 +84,10 @@ const injectButtons = () => {
 
         // Create a container for our shadow host
         const container = document.createElement("div")
+        if (hideButtons) {
+            container.style.display = "none"
+        }
+        injectedContainers.push(container)
 
         // Append to the end of the panel (right side)
         target.appendChild(container)
@@ -77,6 +100,13 @@ const injectButtons = () => {
         root.render(<PlusButton container={target as HTMLElement} variant="profile" />)
     })
 }
+
+// Listen for changes from popup
+storage.watch({
+    [HIDE_BUTTONS_KEY]: (change) => {
+        updateVisibility(change.newValue ?? false)
+    }
+})
 
 // Initial injection
 injectButtons()

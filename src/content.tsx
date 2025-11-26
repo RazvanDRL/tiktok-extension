@@ -1,5 +1,7 @@
 import cssText from "data-text:~style.css"
 import type { PlasmoCSConfig } from "plasmo"
+import { useEffect, useState } from "react"
+import { Storage } from "@plasmohq/storage"
 
 import { DownloadButton } from "~features/download-button"
 import { CopyButton } from "~features/copy-button"
@@ -9,6 +11,9 @@ export const config: PlasmoCSConfig = {
   matches: ["https://*.tiktok.com/*"],
   exclude_matches: ["https://ads.tiktok.com/*"]
 }
+
+const storage = new Storage()
+const HIDE_BUTTONS_KEY = "hideContentButtons"
 
 /**
  * Generates a style element with adjusted CSS to work correctly within a Shadow DOM.
@@ -41,6 +46,28 @@ export const getStyle = (): HTMLStyleElement => {
 }
 
 const PlasmoOverlay = () => {
+  const [hideButtons, setHideButtons] = useState(true) // Start hidden to prevent flash
+  const [isLoaded, setIsLoaded] = useState(false)
+
+  useEffect(() => {
+    // Initial load
+    storage.get<boolean>(HIDE_BUTTONS_KEY).then((value) => {
+      setHideButtons(value ?? false)
+      setIsLoaded(true)
+    })
+
+    // Listen for changes from popup
+    storage.watch({
+      [HIDE_BUTTONS_KEY]: (change) => {
+        setHideButtons(change.newValue ?? false)
+      }
+    })
+  }, [])
+
+  if (!isLoaded || hideButtons) {
+    return null
+  }
+
   return (
     <div className="z-50 flex fixed top-20 right-6 items-start">
       <CopyButton />
