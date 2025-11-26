@@ -6,7 +6,8 @@ import { CopyButton } from "~features/copy-button"
 // import { UrlDebug } from "~components/UrlDebug"
 
 export const config: PlasmoCSConfig = {
-  matches: ["https://*.tiktok.com/*"]
+  matches: ["https://*.tiktok.com/*"],
+  exclude_matches: ["https://ads.tiktok.com/*"]
 }
 
 /**
