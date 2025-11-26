@@ -27,9 +27,10 @@ const getStyle = (): HTMLStyleElement => {
 }
 
 const injectButtons = () => {
-    const targets = document.querySelectorAll('section[class*="SectionActionBarContainer"]')
+    const actionBars = document.querySelectorAll('section[class*="SectionActionBarContainer"]')
+    const profileButtonPanels = document.querySelectorAll('div[class*="DivButtonPanelWrapper"]')
 
-    targets.forEach((target) => {
+    actionBars.forEach((target) => {
         if (target.classList.contains(INJECTED_CLASS)) {
             return
         }
@@ -38,7 +39,6 @@ const injectButtons = () => {
 
         // Create a container for our shadow host
         const container = document.createElement("div")
-        // container.className = "plasmo-csui-container" 
 
         // Insert at the beginning of the action bar (top of the buttons)
         target.insertAdjacentElement("afterbegin", container)
@@ -49,6 +49,32 @@ const injectButtons = () => {
 
         const root = createRoot(shadowRoot)
         root.render(<PlusButton container={target as HTMLElement} />)
+    })
+
+    profileButtonPanels.forEach((target) => {
+        if (target.classList.contains(INJECTED_CLASS)) {
+            return
+        }
+
+        // Ensure this is likely the correct panel (contains Follow/Message buttons)
+        if (!target.textContent?.includes("Follow") && !target.textContent?.includes("Message")) {
+            return
+        }
+
+        target.classList.add(INJECTED_CLASS)
+
+        // Create a container for our shadow host
+        const container = document.createElement("div")
+
+        // Append to the end of the panel (right side)
+        target.appendChild(container)
+
+        const shadowRoot = container.attachShadow({ mode: "open" })
+        const style = getStyle()
+        shadowRoot.appendChild(style)
+
+        const root = createRoot(shadowRoot)
+        root.render(<PlusButton container={target as HTMLElement} variant="profile" />)
     })
 }
 
