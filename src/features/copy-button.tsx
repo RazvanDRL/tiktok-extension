@@ -65,6 +65,7 @@ export const CopyButton = () => {
           resolution: resolution,
           initialData: data // Store original form data
         })
+        setIsDialogOpen(false)
         return
       }
     }
