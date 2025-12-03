@@ -141,8 +141,8 @@ export const CopyDialog = ({ isOpen, onClose, onSubmit }: CopyDialogProps) => {
     }
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 font-sans">
-            <div className="relative w-full max-w-2xl p-6 bg-slate-900 rounded-lg shadow-lg border border-slate-700">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 font-sans p-4">
+            <div className="relative w-full max-w-2xl max-h-full overflow-y-auto p-6 bg-slate-900 rounded-lg shadow-lg border border-slate-700">
                 <button
                     onClick={onClose}
                     className="absolute top-4 right-4 text-slate-400 hover:text-slate-300"
@@ -158,7 +158,7 @@ export const CopyDialog = ({ isOpen, onClose, onSubmit }: CopyDialogProps) => {
                             <label className="text-sm font-medium text-slate-200">Final prompt</label>
                             <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-800 border border-slate-700 text-slate-300">read-only · inserts at {'{your_prompt}'}</span>
                         </div>
-                        <div className="w-full p-3 text-xs leading-5 text-slate-300 bg-slate-800/70 border border-dashed border-slate-600 rounded-lg max-h-50 overflow-auto">
+                        <div className="w-full p-3 text-xs leading-5 text-slate-300 bg-slate-800/70 border border-dashed border-slate-600 rounded-lg max-h-52 overflow-auto">
                             <pre className="whitespace-pre-wrap font-mono">
                                 {DEFAULT_PROMPT.split("{your_prompt}").map((part, idx, arr) => (
                                     <span key={`dp-${idx}`}>
