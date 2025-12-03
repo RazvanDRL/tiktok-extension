@@ -1,8 +1,8 @@
 {
   "name": "tiktok-extension",
-  "displayName": "Tiktok extension",
+  "displayName": "AdLoops Extension",
   "version": "0.0.1",
-  "description": "tiktok extension",
+  "description": "AdLoops Extension",
   "author": "stefan",
   "scripts": {
     "dev": "plasmo dev",

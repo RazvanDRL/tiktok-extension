@@ -80,7 +80,7 @@ const PlasmoOverlay = () => {
 
   return (
     <div className="z-50 flex fixed top-20 right-6 items-start gap-2">
-      {plusButtonEnabled && window.location.pathname.startsWith("/@") && window.location.pathname.includes("/video/") && <PlusButton />}
+      {plusButtonEnabled && <PlusButton />}
       {!hideButtons && (
         <>
           <CopyButton />

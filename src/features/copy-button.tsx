@@ -85,13 +85,8 @@ export const CopyButton = () => {
         }
       })
 
-      if (result.ok) {
-        console.log("Video generation started successfully:", result.data)
-        setIsDialogOpen(false)
-      } else {
-        console.error("Video generation failed:", result.error)
-        alert(`❌ Failed to generate video: ${result.error || "Unknown error"}`)
-      }
+      console.log("Video generated", result.data)
+      setIsDialogOpen(false)
     } catch (error) {
       console.error("Error in handleGenerate:", error)
       alert(`❌ Error: ${error instanceof Error ? error.message : "Unknown error"}`)
