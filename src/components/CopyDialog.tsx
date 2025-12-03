@@ -158,7 +158,7 @@ export const CopyDialog = ({ isOpen, onClose, onSubmit }: CopyDialogProps) => {
                             <label className="text-sm font-medium text-slate-200">Final prompt</label>
                             <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-800 border border-slate-700 text-slate-300">read-only · inserts at {'{your_prompt}'}</span>
                         </div>
-                        <div className="w-full p-3 text-xs leading-5 text-slate-300 bg-slate-800/70 border border-dashed border-slate-600 rounded-lg max-h-52 overflow-auto">
+                        <div className="w-full p-3 text-xs leading-5 text-slate-300 bg-slate-800/70 border border-dashed border-slate-600 rounded-lg max-h-28 overflow-auto">
                             <pre className="whitespace-pre-wrap font-mono">
                                 {DEFAULT_PROMPT.split("{your_prompt}").map((part, idx, arr) => (
                                     <span key={`dp-${idx}`}>
