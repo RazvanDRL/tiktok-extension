@@ -1,5 +1,5 @@
-import { AnimatePresence, motion } from "framer-motion";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
+
 export interface IModalProps {
     isOpen: boolean;
     children: React.ReactNode;
@@ -8,6 +8,17 @@ export interface IModalProps {
 }
 
 const Modal = ({ isOpen, children, onClose, className }: IModalProps) => {
+    const [isVisible, setIsVisible] = useState(false);
+
+    useEffect(() => {
+        if (isOpen) {
+            setIsVisible(true);
+        } else {
+            const timer = setTimeout(() => setIsVisible(false), 200); // Match duration
+            return () => clearTimeout(timer);
+        }
+    }, [isOpen]);
+
     useEffect(() => {
         const handleKeyDown = (event: KeyboardEvent) => {
             if ((event.key === "Escape" || event.key === "Esc") && isOpen) {
@@ -22,42 +33,22 @@ const Modal = ({ isOpen, children, onClose, className }: IModalProps) => {
         };
     }, [isOpen, onClose]);
 
-    const handleClose = () => {
-        onClose();
-    };
+    if (!isVisible && !isOpen) return null;
 
     return (
-        <AnimatePresence mode='wait'>
-            {isOpen && (
-                <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    onClick={handleClose}
-                    className='fixed inset-0 p-8 w-full z-50 flex items-center justify-center bg-black bg-opacity-50'
-                >
-                    <motion.div
-                        initial={{
-                            scale: 0,
-                        }}
-                        animate={{
-                            scale: 1,
-                            x: 0,
-                            y: 0,
-                        }}
-                        exit={{
-                            scale: 0,
-                        }}
-                        transition={{ duration: 0.5, ease: "easeInOut" }}
-                        onClick={(e) => e.stopPropagation()}
-                        className={`shadow-lg relative max-w-3/4 max-h-full overflow-y-auto ${className || ''}`}
-                        style={{ backgroundColor: 'transparent' }}
-                    >
-                        {children}
-                    </motion.div>
-                </motion.div>
-            )}
-        </AnimatePresence>
+        <div
+            onClick={onClose}
+            className={`fixed inset-0 p-8 w-full z-50 flex items-center justify-center bg-black/50 transition-opacity duration-200 ${isOpen ? "opacity-100" : "opacity-0"
+                }`}
+        >
+            <div
+                onClick={(e) => e.stopPropagation()}
+                className={`shadow-lg relative max-w-3/4 max-h-full overflow-y-auto transition-all duration-200 ${isOpen ? "scale-100 opacity-100" : "scale-95 opacity-0"
+                    } ${className || ''}`}
+            >
+                {children}
+            </div>
+        </div>
     );
 };
 

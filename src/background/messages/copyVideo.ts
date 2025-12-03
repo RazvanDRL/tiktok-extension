@@ -96,15 +96,24 @@ const handler: PlasmoMessaging.MessageHandler = async (req, res) => {
             console.log("- Ad Config:", JSON.stringify(adConfig, null, 2))
         }
 
-        const response = await fetch("https://adloops.ai/api/ai-videos/generate-from-tiktok", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                "Accept": "application/json",
-                "Authorization": `Bearer ${token}`
-            },
-            body: JSON.stringify(requestBody)
-        })
+        let response;
+        try {
+            response = await fetch("https://adloops.ai/api/ai-videos/generate-from-tiktok", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Accept": "application/json",
+                    "Authorization": `Bearer ${token}`
+                },
+                body: JSON.stringify(requestBody),
+                credentials: 'omit'
+            })
+        } catch (fetchError: any) {
+            console.error("Fetch failed immediately:", fetchError);
+            // Check if it's a network error or something else
+            res.send({ ok: false, error: `Network request failed: ${fetchError.message || "Unknown error"}` });
+            return;
+        }
 
         let data: any = null
         try {
@@ -113,12 +122,13 @@ const handler: PlasmoMessaging.MessageHandler = async (req, res) => {
             const text = await response.text()
             res.send({
                 ok: false,
-                error: `Invalid JSON response: ${text.substring(0, 100)}`
+                error: `Invalid JSON response (${response.status}): ${text.substring(0, 100)}`
             })
             return
         }
 
         if (!response.ok) {
+            console.error("API responded with error:", response.status, data);
             res.send({
                 ok: false,
                 error: data?.error || data?.message || `API error: ${response.status}`
@@ -132,8 +142,8 @@ const handler: PlasmoMessaging.MessageHandler = async (req, res) => {
         })
         return
     } catch (err: any) {
-        console.error(err)
-        res.send({ ok: false, error: err.message })
+        console.error("Handler error:", err)
+        res.send({ ok: false, error: `Handler error: ${err.message}` })
     }
 }
 
