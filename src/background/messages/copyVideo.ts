@@ -12,11 +12,14 @@ const fetchWithRetry = async (
     body: any,
     token: string,
     attempts = 3,
+    timeoutMs = 300_000,
 ): Promise<{ response: Response }> => {
     let lastError: any = null
 
     for (let attempt = 0; attempt < attempts; attempt++) {
         const endpoint = "https://adloops.ai/api/ai-videos/generate-from-tiktok";
+        const controller = new AbortController()
+        const timeoutId = setTimeout(() => controller.abort(), timeoutMs)
 
         try {
             const response = await fetch(endpoint, {
@@ -28,7 +31,10 @@ const fetchWithRetry = async (
                 },
                 body: JSON.stringify(body),
                 credentials: "omit",
+                signal: controller.signal,
             })
+
+            clearTimeout(timeoutId)
 
             if (!response.ok && response.status >= 500 && attempt < attempts - 1) {
                 lastError = new Error(`Server responded ${response.status}`)
@@ -38,12 +44,17 @@ const fetchWithRetry = async (
 
             return { response }
         } catch (err: any) {
-            lastError = err
+            clearTimeout(timeoutId)
+            if (err?.name === "AbortError") {
+                lastError = new Error(`request_timeout_${timeoutMs}ms`)
+            } else {
+                lastError = err
+            }
             if (attempt < attempts - 1) {
                 await delay(750 * (attempt + 1))
                 continue
             }
-            throw err
+            throw lastError ?? err
         }
     }
 
