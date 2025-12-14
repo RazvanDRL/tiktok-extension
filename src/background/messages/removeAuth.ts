@@ -1,6 +1,15 @@
 import type { PlasmoMessaging } from "@plasmohq/messaging"
 import { Storage } from "@plasmohq/storage"
 
+const errorToMessage = (err: unknown): string => {
+    if (err instanceof Error) return err.message
+    try {
+        return typeof err === "string" ? err : JSON.stringify(err)
+    } catch {
+        return String(err)
+    }
+}
+
 const handler: PlasmoMessaging.MessageHandler = async (req, res) => {
     try {
         const storage = new Storage()
@@ -10,12 +19,11 @@ const handler: PlasmoMessaging.MessageHandler = async (req, res) => {
         await storage.set("firebaseRefreshToken", null)
 
         res.send({
-            status: "success"
+            ok: true
         })
     } catch (err) {
-        console.log("There was an error")
-        console.error(err)
-        res.send({ err })
+        console.error("removeAuth error:", err)
+        res.send({ ok: false, error: errorToMessage(err) })
     }
 }
 

@@ -24,12 +24,18 @@ export default function useFirebaseUser() {
     const onLogout = async () => {
         setIsLoading(true)
         if (user) {
-            await auth.signOut()
-
-            await sendToBackground({
-                name: "removeAuth" as never,
-                body: {}
-            })
+            try {
+                await auth.signOut()
+            } finally {
+                try {
+                    await sendToBackground({
+                        name: "removeAuth" as never,
+                        body: {}
+                    })
+                } catch (err) {
+                    console.error("Failed to removeAuth in background:", err)
+                }
+            }
         }
     }
 
@@ -50,18 +56,24 @@ export default function useFirebaseUser() {
 
         const uid = user.uid
 
-        // Get current user auth token
-        user.getIdToken(true).then(async (token) => {
-            // Send token to background to save
-            await sendToBackground({
-                name: "saveAuth" as never,
-                body: {
-                    token: token as string,
-                    uid,
-                    refreshToken: user.refreshToken
+            ; (async () => {
+                try {
+                    // Get current user auth token
+                    const token = await user.getIdToken(true)
+
+                    // Send token to background to save
+                    await sendToBackground({
+                        name: "saveAuth" as never,
+                        body: {
+                            token: token as string,
+                            uid,
+                            refreshToken: user.refreshToken
+                        }
+                    })
+                } catch (err) {
+                    console.error("onLogin failed:", err)
                 }
-            })
-        })
+            })()
     }
 
     const fetchManualUser = useCallback(async (): Promise<UserType | null> => {

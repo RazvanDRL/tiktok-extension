@@ -86,6 +86,10 @@ export const CopyButton = () => {
         }
       })
 
+      if (!result?.ok) {
+        throw new Error(result?.error || "Failed to start generation")
+      }
+
       console.log("Video generated", result.data)
       setIsDialogOpen(false)
     } catch (error) {
@@ -125,13 +129,12 @@ export const CopyButton = () => {
           }
         })
 
-        if (result.ok) {
-          console.log("Ad video generation started successfully:", result.data)
-          setIsDialogOpen(false)
-        } else {
-          console.error("Ad video generation failed:", result.error)
-          alert(`❌ Failed to generate ad video: ${result.error || "Unknown error"}`)
+        if (!result?.ok) {
+          throw new Error(result?.error || "Failed to generate ad video")
         }
+
+        console.log("Ad video generation started successfully:", result.data)
+        setIsDialogOpen(false)
       } catch (error) {
         console.error("Error in handleCreateAdComplete:", error)
         alert(`❌ Error: ${error instanceof Error ? error.message : "Unknown error"}`)

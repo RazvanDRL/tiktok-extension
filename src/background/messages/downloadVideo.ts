@@ -1,5 +1,14 @@
 import type { PlasmoMessaging } from "@plasmohq/messaging"
 
+const errorToMessage = (err: unknown): string => {
+    if (err instanceof Error) return err.message
+    try {
+        return typeof err === "string" ? err : JSON.stringify(err)
+    } catch {
+        return String(err)
+    }
+}
+
 const handler: PlasmoMessaging.MessageHandler = async (req, res) => {
     try {
         const { url } = req.body ?? {}
@@ -44,6 +53,14 @@ const handler: PlasmoMessaging.MessageHandler = async (req, res) => {
                 ? data.url
                 : null
 
+        if (!downloadUrl) {
+            res.send({
+                ok: false,
+                error: "missing_download_url"
+            })
+            return
+        }
+
         try {
             const downloadId = await chrome.downloads.download({
                 url: downloadUrl,
@@ -58,9 +75,17 @@ const handler: PlasmoMessaging.MessageHandler = async (req, res) => {
             })
         } catch (downloadErr: any) {
             console.error(downloadErr)
+            res.send({
+                ok: false,
+                error: `download_failed:${errorToMessage(downloadErr)}`
+            })
         }
     } catch (err: any) {
         console.error(err)
+        res.send({
+            ok: false,
+            error: `handler_failed:${errorToMessage(err)}`
+        })
     }
 }
 

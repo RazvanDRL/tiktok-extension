@@ -13,18 +13,18 @@ export default function AuthForm() {
     const { isLoading, onLogin } = useFirebaseUser()
 
     const signIn = async (e: any) => {
+        e.preventDefault()
         if (!email || !password)
             return console.log("Please enter email and password")
 
-        e.preventDefault()
         try {
             await signInWithEmailAndPassword(auth, email, password)
+            onLogin()
         } catch (error: any) {
             console.log(error.message)
         } finally {
             setEmail("")
             setPassword("")
-            onLogin()
         }
     }
 

@@ -3,12 +3,40 @@ import { Storage } from "@plasmohq/storage"
 
 import { isTokenExpired, refreshAuthToken } from "../../utils/refreshAuthToken"
 
+const errorToMessage = (err: unknown): string => {
+    if (err instanceof Error) return err.message
+    try {
+        return typeof err === "string" ? err : JSON.stringify(err)
+    } catch {
+        return String(err)
+    }
+}
+
+const parseTikTokUsername = (authorLink: string): string | null => {
+    const trimmed = authorLink.trim()
+    if (!trimmed) return null
+
+    // Accept: "@user", "/@user", "https://www.tiktok.com/@user", etc.
+    const match = trimmed.match(/@([A-Za-z0-9._]+)/)
+    if (match?.[1]) return match[1]
+
+    // Fallback: treat raw string as username (e.g. "user")
+    const fallback = trimmed.replace(/^\/+/, "")
+    return fallback.length > 0 ? fallback : null
+}
+
 const handler: PlasmoMessaging.MessageHandler = async (req, res) => {
     try {
         const { authorLink } = req.body ?? {}
 
         if (!authorLink) {
             res.send({ ok: false, error: "missing_author_link" })
+            return
+        }
+
+        const username = parseTikTokUsername(authorLink)
+        if (!username) {
+            res.send({ ok: false, error: "invalid_author_link" })
             return
         }
 
@@ -52,7 +80,7 @@ const handler: PlasmoMessaging.MessageHandler = async (req, res) => {
                 "Authorization": `Bearer ${token}`
             },
             body: JSON.stringify({
-                username: authorLink.replace("/@", "")
+                username
             })
         })
 
@@ -81,8 +109,8 @@ const handler: PlasmoMessaging.MessageHandler = async (req, res) => {
             data
         })
     } catch (err: any) {
-        console.error(err)
-        res.send({ ok: false, error: err.message })
+        console.error("addInfluencer error:", err)
+        res.send({ ok: false, error: errorToMessage(err) })
     }
 }
 

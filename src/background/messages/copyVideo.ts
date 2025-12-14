@@ -6,7 +6,66 @@ import { isTokenExpired, refreshAuthToken } from "../../utils/refreshAuthToken"
 import { db } from "~firebase/firebaseClient"
 import type { User as UserType } from "~models/user"
 
+const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
+
+const fetchWithRetry = async (
+    body: any,
+    token: string,
+    attempts = 3,
+): Promise<{ response: Response }> => {
+    let lastError: any = null
+
+    for (let attempt = 0; attempt < attempts; attempt++) {
+        const endpoint = "https://adloops.ai/api/ai-videos/generate-from-tiktok";
+
+        try {
+            const response = await fetch(endpoint, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Accept": "application/json",
+                    "Authorization": `Bearer ${token}`
+                },
+                body: JSON.stringify(body),
+                credentials: "omit",
+            })
+
+            if (!response.ok && response.status >= 500 && attempt < attempts - 1) {
+                lastError = new Error(`Server responded ${response.status}`)
+                await delay(750 * (attempt + 1))
+                continue
+            }
+
+            return { response }
+        } catch (err: any) {
+            lastError = err
+            if (attempt < attempts - 1) {
+                await delay(750 * (attempt + 1))
+                continue
+            }
+            throw err
+        }
+    }
+
+    throw lastError ?? new Error("Unknown network error")
+}
+
 const handler: PlasmoMessaging.MessageHandler = async (req, res) => {
+    // Keep the service worker alive while waiting for long-running API calls.
+    const keepAlive = setInterval(() => {
+        try {
+            // Accessing runtime id is a cheap no-op that keeps the worker active.
+            chrome.runtime?.id
+        } catch {
+            // Ignore; just best-effort to prevent idle shutdown.
+        }
+    }, 20_000)
+
+    const sendError = (error: string) => {
+        clearInterval(keepAlive)
+        res.send({ ok: false, error })
+    }
+
     try {
         let { url } = req.body ?? {}
         const { prompt, count = 1, duration = 8, size = "720x1280", fps, max_duration, adConfig } = req.body ?? {}
@@ -16,8 +75,7 @@ const handler: PlasmoMessaging.MessageHandler = async (req, res) => {
         }
 
         if (!url || !prompt || !count || !duration || !size) {
-            res.send({ ok: false, error: "missing_required_fields" })
-            return
+            return sendError("missing_required_fields")
         }
 
         const storage = new Storage()
@@ -26,8 +84,7 @@ const handler: PlasmoMessaging.MessageHandler = async (req, res) => {
         const refreshToken = await storage.get("firebaseRefreshToken")
 
         if (!token || !uid) {
-            res.send({ ok: false, error: "user_not_found" })
-            return
+            return sendError("user_not_found")
         }
 
         if (isTokenExpired(token)) {
@@ -41,13 +98,11 @@ const handler: PlasmoMessaging.MessageHandler = async (req, res) => {
                     console.log("Token refreshed successfully")
                 } else {
                     console.error("Failed to refresh token")
-                    res.send({ ok: false, error: "auth_expired_refresh_failed" })
-                    return
+                    return sendError("auth_expired_refresh_failed")
                 }
             } else {
                 console.error("Token expired and no refresh token found")
-                res.send({ ok: false, error: "auth_expired_no_refresh_token" })
-                return
+                return sendError("auth_expired_no_refresh_token")
             }
         }
 
@@ -69,8 +124,8 @@ const handler: PlasmoMessaging.MessageHandler = async (req, res) => {
             count: count as number,
             duration: duration as number,
             size: size as string,
-            uploaded_by: manualUser?.name || "[extension]",
-            language: "english",
+            uploaded_by: manualUser?.name ? `[E]${manualUser.name}` : "[EXTENSION]",
+            language: "english"
         }
 
         // Add optional fields only if they are provided
@@ -96,23 +151,15 @@ const handler: PlasmoMessaging.MessageHandler = async (req, res) => {
             console.log("- Ad Config:", JSON.stringify(adConfig, null, 2))
         }
 
-        let response;
+        let response: Response
+
         try {
-            response = await fetch("https://adloops.ai/api/ai-videos/generate-from-tiktok", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    "Accept": "application/json",
-                    "Authorization": `Bearer ${token}`
-                },
-                body: JSON.stringify(requestBody),
-                credentials: 'omit'
-            })
+            const result = await fetchWithRetry(requestBody, token as string)
+            console.log("Fetch response:", result.response)
+            response = result.response
         } catch (fetchError: any) {
-            console.error("Fetch failed immediately:", fetchError);
-            // Check if it's a network error or something else
-            res.send({ ok: false, error: `Network request failed: ${fetchError.message || "Unknown error"}` });
-            return;
+            console.error("Fetch error:", fetchError)
+            return sendError(fetchError?.message || "fetch_failed")
         }
 
         let data: any = null
@@ -120,20 +167,13 @@ const handler: PlasmoMessaging.MessageHandler = async (req, res) => {
             data = await response.json()
         } catch {
             const text = await response.text()
-            res.send({
-                ok: false,
-                error: `Invalid JSON response (${response.status}): ${text.substring(0, 100)}`
-            })
-            return
+            console.error("Invalid JSON response:", text)
+            return sendError(`invalid_json_response:${text.substring(0, 100)}`)
         }
 
         if (!response.ok) {
-            console.error("API responded with error:", response.status, data);
-            res.send({
-                ok: false,
-                error: data?.error || data?.message || `API error: ${response.status}`
-            })
-            return
+            console.error("API responded with error:", response.status, data)
+            return sendError(data?.error || data?.message || `api_error_${response.status}`)
         }
 
         res.send({
@@ -143,7 +183,9 @@ const handler: PlasmoMessaging.MessageHandler = async (req, res) => {
         return
     } catch (err: any) {
         console.error("Handler error:", err)
-        res.send({ ok: false, error: `Handler error: ${err.message}` })
+        return sendError(err?.message || "unknown_error")
+    } finally {
+        clearInterval(keepAlive)
     }
 }
 
