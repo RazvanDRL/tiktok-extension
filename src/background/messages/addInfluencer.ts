@@ -27,7 +27,7 @@ const parseTikTokUsername = (authorLink: string): string | null => {
 
 const handler: PlasmoMessaging.MessageHandler = async (req, res) => {
     try {
-        const { authorLink } = req.body ?? {}
+        const { authorLink, type } = req.body ?? {}
 
         if (!authorLink) {
             res.send({ ok: false, error: "missing_author_link" })
@@ -80,7 +80,8 @@ const handler: PlasmoMessaging.MessageHandler = async (req, res) => {
                 "Authorization": `Bearer ${token}`
             },
             body: JSON.stringify({
-                username
+                username,
+                type
             })
         })
 
