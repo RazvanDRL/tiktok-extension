@@ -51,6 +51,31 @@ const PlasmoOverlay = () => {
   const [hideButtons, setHideButtons] = useState(true) // Start hidden to prevent flash
   const [plusButtonEnabled, setPlusButtonEnabled] = useState(false)
   const [isLoaded, setIsLoaded] = useState(false)
+  const [isProfilePage, setIsProfilePage] = useState(false)
+
+  useEffect(() => {
+    const checkIsProfile = () => {
+      const isProfile = /^\/@[^/]+\/?$/.test(window.location.pathname)
+      setIsProfilePage(isProfile)
+    }
+
+    checkIsProfile()
+
+    const intervalId = window.setInterval(checkIsProfile, 500)
+
+    const handleUrlChange = () => {
+      checkIsProfile()
+    }
+
+    window.addEventListener("popstate", handleUrlChange)
+    window.addEventListener("hashchange", handleUrlChange)
+
+    return () => {
+      window.clearInterval(intervalId)
+      window.removeEventListener("popstate", handleUrlChange)
+      window.removeEventListener("hashchange", handleUrlChange)
+    }
+  }, [])
 
   useEffect(() => {
     // Initial load
@@ -80,7 +105,7 @@ const PlasmoOverlay = () => {
 
   return (
     <div className="z-50 flex fixed top-20 right-6 items-start gap-2">
-      {plusButtonEnabled && <PlusButton />}
+      {plusButtonEnabled && isProfilePage && <PlusButton />}
       {!hideButtons && (
         <>
           <CopyButton />
