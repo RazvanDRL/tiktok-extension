@@ -2,6 +2,7 @@ import type { PlasmoMessaging } from "@plasmohq/messaging"
 import { Storage } from "@plasmohq/storage"
 
 import { isTokenExpired, refreshAuthToken } from "../../utils/refreshAuthToken"
+import { BASE_URL } from "~constants"
 
 const errorToMessage = (err: unknown): string => {
     if (err instanceof Error) return err.message
@@ -72,7 +73,7 @@ const handler: PlasmoMessaging.MessageHandler = async (req, res) => {
 
         console.log("Sending request to add-influencer API:", authorLink)
 
-        const response = await fetch("https://adloops.ai/api/add-influencer", {
+        const response = await fetch(`${BASE_URL}/api/add-influencer`, {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",

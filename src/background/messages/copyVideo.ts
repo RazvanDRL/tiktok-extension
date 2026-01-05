@@ -5,6 +5,7 @@ import { doc, getDoc } from "firebase/firestore"
 import { isTokenExpired, refreshAuthToken } from "../../utils/refreshAuthToken"
 import { db } from "~firebase/firebaseClient"
 import type { User as UserType } from "~models/user"
+import { BASE_URL } from "~constants"
 
 const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 
@@ -17,7 +18,7 @@ const fetchWithRetry = async (
     let lastError: any = null
 
     for (let attempt = 0; attempt < attempts; attempt++) {
-        const endpoint = "https://adloops.ai/api/ai-videos/generate-from-tiktok";
+        const endpoint = `${BASE_URL}/api/ai-videos/generate-from-tiktok`;
         const controller = new AbortController()
         const timeoutId = setTimeout(() => controller.abort(), timeoutMs)
 
